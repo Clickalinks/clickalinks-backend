@@ -316,7 +316,7 @@
         <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
         <a href="terms.html"><i class="fas fa-file-contract"></i> Terms & Conditions</a>
         <a href="how-it-works.html"><i class="fas fa-play-circle"></i> How It Works</a>
-        <a href="mailto:info@clickalinks.com" className="footer-link"><i className="fas fa-envelope"></i> Contact Us</a>
+        <a href="mailto:info@clickalinks.com" class="footer-link"><i className="fas fa-envelope"></i> Contact Us</a>
     </div>
     
     <div class="payment-icons">
@@ -414,82 +414,79 @@ async function processPayment() {
         status: 'pending'
     };
 
-    try {
-        const btnPay = document.getElementById('btnPay');
-        btnPay.disabled = true;
-        btnPay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+try {
+    const btnPay = document.getElementById('btnPay');
+    btnPay.disabled = true;
+    btnPay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-        console.log('🔄 Sending request to backend...', {
+    console.log('🔄 Sending request to backend...', {
+        squareId: selectedSquare,
+        duration: selectedDuration,
+        purchaseData: purchaseData
+    });
+
+    // Call Stripe backend with error handling
+    const response = await fetch('https://clickalinks-backend-1.onrender.com/create-checkout-session', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
             squareId: selectedSquare,
             duration: selectedDuration,
             purchaseData: purchaseData
-        });
+        })
+    });
 
-        // Call Stripe backend with error handling
-        const API_BASE_URL = window.location.hostname === 'localhost' 
-        ? 'http://192.168.0.240:3001' 
-        : 'http://localhost:3001';
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
 
-        const response = await fetch(`${API_BASE_URL}/create-checkout-session`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-    },
-            body: JSON.stringify({
-                squareId: selectedSquare,
-                duration: selectedDuration,
-                purchaseData: purchaseData
-            })
-        });
-
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Server response error:', errorText);
-            throw new Error(`Server error: ${response.status} - ${errorText}`);
-        }
-
-        const session = await response.json();
-        console.log('✅ Session created:', session);
-        
-        // Save purchase data temporarily
-        localStorage.setItem(`purchase_${selectedSquare}`, JSON.stringify(purchaseData));
-        
-        // Redirect to Stripe
-        console.log('🔗 Redirecting to Stripe...');
-        window.location.href = session.url;
-
-    } catch (error) {
-        console.error('❌ Payment error:', error);
-        
-        let errorMessage = 'Payment processing error: ';
-        if (error.message.includes('Failed to fetch')) {
-            errorMessage += 'Cannot connect to server. Make sure backend is running on port 3001.';
-        } else if (error.message.includes('Network response')) {
-            errorMessage += 'Server returned an error. Check backend logs.';
-        } else {
-            errorMessage += error.message;
-        }
-        
-        alert(errorMessage);
-        
-        // Reset button
-        const btnPay = document.getElementById('btnPay');
-        btnPay.disabled = false;
-        btnPay.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Server response error:', errorText);
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
     }
+
+    const session = await response.json();
+    console.log('✅ Session created:', session);
+    
+    // Save purchase data temporarily
+    localStorage.setItem(`purchase_${selectedSquare}`, JSON.stringify(purchaseData));
+    
+    // Redirect to Stripe
+    console.log('🔗 Redirecting to Stripe...');
+    window.location.href = session.url;
+
+} catch (error) {
+    console.error('❌ Payment error:', error);
+    
+    let errorMessage = 'Payment processing error: ';
+    if (error.message.includes('Failed to fetch')) {
+        errorMessage += 'Cannot connect to payment server. Please try again.';
+    } else if (error.message.includes('Network response')) {
+        errorMessage += 'Server returned an error. Please try again.';
+    } else {
+        errorMessage += error.message;
+    }
+    
+    alert(errorMessage);
+    
+    // Reset button
+    const btnPay = document.getElementById('btnPay');
+    btnPay.disabled = false;
+    btnPay.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
 }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            getOrderDetails();
-            document.getElementById('businessName').addEventListener('input', validateForm);
-            document.getElementById('contactEmail').addEventListener('input', validateForm);
-            document.getElementById('dealLink').addEventListener('input', validateForm);
-            document.getElementById('adText').addEventListener('input', updateCharCount);
-        });
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    getOrderDetails();
+    document.getElementById('businessName').addEventListener('input', validateForm);
+    document.getElementById('contactEmail').addEventListener('input', validateForm);
+    document.getElementById('dealLink').addEventListener('input', validateForm);
+    document.getElementById('adText').addEventListener('input', updateCharCount);
+});
     </script>
+
 </body>
+
 </html>
