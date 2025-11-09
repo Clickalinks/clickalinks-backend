@@ -44,6 +44,28 @@ app.use(cors({
 // Handle preflight OPTIONS requests
 app.options('*', cors());
 
+// ⬇️ ADD WEBHOOK HERE ⬇️
+// Stripe Webhook (must be before express.json)
+app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.log(`❌ Webhook error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    console.log('💰 Payment successful for square:', session.metadata.squareId);
+    // TODO: Save to database
+  }
+
+  res.json({received: true});
+});
+
 // JSON middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -64,30 +86,40 @@ app.get('/test-connection', (req, res) => {
 // Main checkout route
 app.post('/create-checkout-session', async (req, res) => {
   try {
-    const { squareId, duration, purchaseData } = req.body;
+    const { squareId, duration, purchaseData, currency = 'GBP' } = req.body;
     
-    console.log('📦 Received purchase data:', { squareId, duration, purchaseData });
+    console.log('📦 Received purchase data:', { squareId, duration, purchaseData, currency });
     
-    // Get price from PRICING configuration
-    const amount = PRICING[duration];
+    // Currency conversion rates
+    const CURRENCY_RATES = {
+      USD: 1.3,  // £1 = $1.30
+      EUR: 1.1,  // £1 = €1.10
+      GBP: 1     // Base currency
+    };
     
-    if (!amount) {
+    // Get base price and convert if needed
+    const baseAmount = PRICING[duration];
+    const convertedAmount = Math.round(baseAmount * CURRENCY_RATES[currency]);
+    
+    console.log('💱 Currency conversion:', { baseAmount, currency, convertedAmount });
+    
+    if (!baseAmount) {
       return res.status(400).json({ error: 'Invalid duration selected' });
     }
     
-    console.log('💳 Creating checkout session for:', { squareId, duration, amount });
+    console.log('💳 Creating checkout session for:', { squareId, duration, convertedAmount });
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'gbp',
+            currency: currency.toLowerCase(),
             product_data: {
               name: `ClickaLinks - Square #${squareId} - ${purchaseData.businessName}`,
               description: `Advertising space for ${duration} days - ${purchaseData.adText || 'Special offer'}`,
             },
-            unit_amount: amount,
+            unit_amount: convertedAmount,
           },
           quantity: 1,
         },
@@ -103,9 +135,10 @@ app.post('/create-checkout-session', async (req, res) => {
         squareId: squareId,
         duration: duration,
         businessName: purchaseData.businessName,
-        contactEmail: purchaseData.contactEmail
+        contactEmail: purchaseData.contactEmail,
+        currency: currency // Store currency in metadata
       }
-    });
+    }); // ← THIS WAS MISSING!
 
     console.log('✅ Session created with URL:', session.url);
     res.json({ id: session.id, url: session.url });

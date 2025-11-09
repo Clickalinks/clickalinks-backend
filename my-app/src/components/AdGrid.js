@@ -31,65 +31,46 @@ const AdGrid = () => {
       return {
         id: squareNumber,
         isAvailable: true,
-        price: '£1/DAY'
+        price: '£1/day'
       };
     });
     
     setSquares(initialSquares);
   }, []);
 
-// In your AdGrid.js - make sure this is correct:
-const handleSquareClick = (square) => {
-  if (square.isAvailable) {
-    // Redirect to purchase.html with square number
-    window.location.href = `/purchase.html?square=${square.id}`;
-  } else {
-    window.open(square.dealLink, '_blank');
-  }
-};
+  const handleSquareClick = (square) => {
+    if (square.isAvailable) {
+      // Redirect to purchase.html with square number
+      window.location.href = `/purchase.html?square=${square.id}`;
+    } else {
+      window.open(square.dealLink, '_blank');
+    }
+  };
 
-return (
-  <div className="grid" style={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(10, 100px)',
-    gap: '10px',
-    justifyContent: 'center',
-    margin: '0.1rem auto'
-    // REMOVED maxWidth: '1100px'
-  }}>
-
-    {squares.map(square => (
-      <div
-        key={square.id}
-        className="square"
-        style={{
-          width: '100px',
-          height: '100px',
-          border: '1px solid #ddd',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          background: 'none',
-          position: 'relative'
-        }}
-        onClick={() => handleSquareClick(square)}
-        title={!square.isAvailable ? `${square.businessName}\nClick to visit deal` : 'Click to purchase this square'}
-      >
-        {square.isAvailable ? (
-          <>
-            <div className="square-text">BUY THIS SQUARE</div>
-            <div className="square-price">{square.price}</div>
-            <div className="square-number">#{square.id}</div>
-          </>
-        ) : (
-          <img src={square.logoData} alt={square.businessName} style={{maxWidth: '90%', maxHeight: '90%'}} />
-        )}
+  return (
+    <div className="grid-container">
+      <div className="squares-grid">
+        {squares.map(square => (
+          <div
+            key={square.id}
+            className="square"
+            onClick={() => handleSquareClick(square)}
+            title={!square.isAvailable ? `${square.businessName}\nClick to visit deal` : 'Click to purchase this square'}
+          >
+            {square.isAvailable ? (
+              <>
+                <div className="square-text">BUY THIS SQUARE</div>
+                <div className="square-price">{square.price}</div>
+                <div className="square-number">#{square.id}</div>
+              </>
+            ) : (
+              <img src={square.logoData} alt={square.businessName} className="occupied-logo" />
+            )}
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
 };
 
 export default AdGrid;
