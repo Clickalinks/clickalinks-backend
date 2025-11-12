@@ -1,77 +1,99 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const Purchase = () => {
-  const [selectedSquare, setSelectedSquare] = useState(1);
-  const [selectedDuration, setSelectedDuration] = useState(10);
+  const location = useLocation();
   const navigate = useNavigate();
+  const { squareNumber, pageNumber } = location.state || {};
+  
+  const [selectedDuration, setSelectedDuration] = useState(10);
 
-  // Fixed handleCheckout function:
   const handleCheckout = () => {
     navigate('/business-details', { 
       state: { 
-        square: selectedSquare, 
-        duration: selectedDuration 
+        squareNumber: squareNumber || 1,
+        pageNumber: pageNumber || 1,
+        duration: selectedDuration
       }
     });
   };
 
-  // KEEP ALL YOUR EXISTING RETURN JSX CODE HERE
-  return (
-    <div className="purchase-page">
-      <header>
-        <a href="/">
-          <img src="/logo.PNG" alt="CLICKaLINKS" className="logo-img" />
-        </a>
-      </header>
+  const durations = [
+    { days: 10, price: 10, label: '10 days - £10' },
+    { days: 20, price: 20, label: '20 days - £20' },
+    { days: 30, price: 30, label: '30 days - £30' },
+    { days: 60, price: 60, label: '60 days - £60' }
+  ];
 
-      <div className="running-strip">
-        <div className="marquee">
-          🚀 DIRECTING BUSINESSES TO CUSTOMERS • ONE CLICK AT A TIME • AFFORDABLE ADVERTISING • 
-        </div>
+  return (
+    <div className="checkout-container">
+      <div className="checkout-header">
+        <h1>🎯 Select Your Advertising Duration</h1>
+        <p>Choose how long you want your advertisement to run</p>
       </div>
 
-      <div className="container">
-        <h1>Select Your Advertising Square</h1>
-        
-        {/* Square Selection */}
-        <div className="square-selection">
-          <h3>Choose a Square</h3>
-          <select 
-            value={selectedSquare} 
-            onChange={(e) => setSelectedSquare(parseInt(e.target.value))}
-          >
-            {[...Array(100)].map((_, i) => (
-              <option key={i + 1} value={i + 1}>Square #{i + 1}</option>
-            ))}
-          </select>
+      <div className="checkout-content">
+        {/* Order Summary */}
+        <div className="order-summary">
+          <h3>📋 Selected Square</h3>
+          <div className="summary-details">
+            <div className="summary-item">
+              <span>Square Number:</span>
+              <strong>#{squareNumber || 'Not selected'}</strong>
+            </div>
+            <div className="summary-item">
+              <span>Page:</span>
+              <strong>Page {pageNumber || 1}</strong>
+            </div>
+            <div className="summary-item total">
+              <span>Selected Duration:</span>
+              <strong>{selectedDuration} days</strong>
+            </div>
+            <div className="summary-item total">
+              <span>Total Amount:</span>
+              <strong>£{selectedDuration}.00</strong>
+            </div>
+          </div>
         </div>
 
         {/* Duration Selection */}
-        <div className="duration-selection">
-          <h3>Select Duration</h3>
-          <select 
-            value={selectedDuration} 
-            onChange={(e) => setSelectedDuration(parseInt(e.target.value))}
-          >
-            <option value={10}>10 days - £10</option>
-            <option value={30}>30 days - £30</option>
-            <option value={60}>60 days - £60</option>
-            <option value={90}>90 days - £90</option>
-          </select>
-        </div>
+        <div className="business-form">
+          <div className="form-section">
+            <h3>⏰ Campaign Duration</h3>
+            <p>Choose how long you want your advertisement to be visible to customers.</p>
+            
+            <div className="duration-options">
+              {durations.map((duration) => (
+                <div 
+                  key={duration.days}
+                  className={`duration-option ${selectedDuration === duration.days ? 'selected' : ''}`}
+                  onClick={() => setSelectedDuration(duration.days)}
+                >
+                  <div className="duration-days">{duration.days} days</div>
+                  <div className="duration-price">£{duration.price}.00</div>
+                  <div className="duration-rate">(£1 per day)</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {/* Order Summary */}
-        <div className="order-summary">
-          <h3>Order Summary</h3>
-          <p><strong>Square:</strong> #{selectedSquare}</p>
-          <p><strong>Duration:</strong> {selectedDuration} days</p>
-          <p><strong>Total:</strong> £{selectedDuration}.00</p>
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="btn-secondary" 
+              onClick={() => navigate(-1)}
+            >
+              ← Back to Squares
+            </button>
+            <button 
+              type="button" 
+              className="btn-primary" 
+              onClick={handleCheckout}
+            >
+              Continue to Business Details →
+            </button>
+          </div>
         </div>
-
-        <button className="checkout-btn" onClick={handleCheckout}>
-          Proceed to Checkout
-        </button>
       </div>
     </div>
   );
