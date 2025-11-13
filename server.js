@@ -44,6 +44,18 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ADD THE DEBUG ENDPOINT RIGHT HERE:
+app.get('/debug', (req, res) => {
+  res.json({
+    stripeSecretKeyExists: !!process.env.STRIPE_SECRET_KEY,
+    stripeSecretKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'MISSING',
+    stripePublishableKeyExists: !!process.env.STRIPE_PUBLISHABLE_KEY,
+    nodeEnv: process.env.NODE_ENV,
+    frontendUrl: process.env.FRONTEND_URL,
+    allEnvVars: Object.keys(process.env).filter(key => key.includes('STRIPE') || key.includes('NODE') || key.includes('FRONTEND'))
+  });
+});
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ 
