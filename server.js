@@ -1,44 +1,43 @@
 import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
 import Stripe from 'stripe';
 
-const app = express();
+// Load environment variables
+dotenv.config();
 
-// ✅ NUCLEAR CORS - HANDLES EVERYTHING
-app.use((req, res, next) => {
-  console.log(`🌐 Incoming ${req.method} request to ${req.path} from origin: ${req.headers.origin}`);
-  
-  // Set CORS headers for ALL responses
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Content-Length, X-API-Key');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('🛬 Handling OPTIONS preflight request');
-    return res.status(200).send();
-  }
-  
-  next();
-});
+const app = express();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const PORT = process.env.PORT || 10000;
+
+// ✅ FIXED CORS - ADD YOUR ACTUAL FRONTEND DOMAIN
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app', // ← ADD THIS
+    'https://clickalinks-frontend.firebaseapp.com', // ← ADD THIS
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 
-// ✅ DEBUG HEALTH CHECK
+// ✅ HEALTH CHECK
 app.get('/health', (req, res) => {
-  console.log('🏥 Health check called from:', req.headers.origin);
   res.json({ 
     status: 'OK', 
-    message: 'Backend is running with NUCLEAR CORS!',
+    message: 'Backend is running with FIXED CORS!',
     timestamp: new Date().toISOString(),
-    yourOrigin: req.headers.origin,
-    cors: 'ENABLED_FOR_ALL_ORIGINS'
+    frontend: 'https://clickalinks-frontend.web.app'
   });
 });
 
-// ✅ TEST ENDPOINT - VERIFY CORS WORKS
+// ✅ TEST CORS ENDPOINT
 app.get('/api/test-cors', (req, res) => {
-  console.log('🧪 CORS test endpoint called from:', req.headers.origin);
   res.json({
     success: true,
     message: 'CORS IS WORKING! 🎉',
@@ -48,18 +47,10 @@ app.get('/api/test-cors', (req, res) => {
 });
 
 // ✅ STRIPE PAYMENT ENDPOINT
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    console.log('💰 Payment request received from origin:', req.headers.origin);
-    console.log('📦 Request body:', JSON.stringify(req.body));
+    console.log('💰 Payment request received from:', req.headers.origin);
     
-    // Validate Stripe key
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('Stripe secret key not configured');
-    }
-
     const { 
       amount, 
       businessName, 
@@ -127,14 +118,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('🚀 Server running with NUCLEAR CORS!');
-  console.log('📍 Port:', PORT);
-  console.log('🌐 CORS: ENABLED FOR ALL ORIGINS (*)');
-  console.log('💳 Stripe: READY');
-<<<<<<< HEAD
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 CORS enabled for: clickalinks-frontend.web.app`);
 });
-=======
-});
->>>>>>> 911d79f83c9bb36638548ae1d4c5b29efd8fdf9b
