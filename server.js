@@ -133,4 +133,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('📍 Port:', PORT);
   console.log('🌐 CORS: ENABLED FOR ALL ORIGINS (*)');
   console.log('💳 Stripe: READY');
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> 911d79f83c9bb36638548ae1d4c5b29efd8fdf9b
