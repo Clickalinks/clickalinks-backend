@@ -1,4 +1,4 @@
-import express from 'express';
+import express from 'express'; // ← ADD THIS MISSING IMPORT
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
