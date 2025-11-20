@@ -1,4 +1,4 @@
-import express from 'express'; // ← ADD THIS MISSING IMPORT
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
@@ -10,12 +10,12 @@ const app = express();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
-// ✅ FIXED CORS - ADD YOUR ACTUAL FRONTEND DOMAIN
+// CORS configuration
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://clickalinks-frontend.web.app', // ← ADD THIS
-    'https://clickalinks-frontend.firebaseapp.com', // ← ADD THIS
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
     'https://clickalinks-frontend-1.onrender.com',
     'https://www.clickalinks.com'
   ],
@@ -46,7 +46,36 @@ app.get('/api/test-cors', (req, res) => {
   });
 });
 
-// ✅ STRIPE PAYMENT ENDPOINT
+// ✅ CHECK SESSION ENDPOINT (ADD THIS)
+app.get('/api/check-session/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    console.log('🔍 Checking session:', sessionId);
+    
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    res.json({
+      success: true,
+      session: {
+        id: session.id,
+        status: session.status,
+        payment_status: session.payment_status,
+        customer_email: session.customer_email,
+        amount_total: session.amount_total ? session.amount_total / 100 : 0,
+        metadata: session.metadata
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Session check error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ STRIPE PAYMENT ENDPOINT (UPDATED - NO DEAL DESCRIPTION)
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     console.log('💰 Payment request received from:', req.headers.origin);
@@ -58,19 +87,19 @@ app.post('/api/create-checkout-session', async (req, res) => {
       duration, 
       contactEmail,
       pageNumber = 1,
-      website = '',
-      dealDescription = ''
+      website = ''
+      // Removed dealDescription
     } = req.body;
 
     // Validate required fields
-    if (!amount || !businessName || !squareNumber || !duration || !contactEmail) {
+    if (!amount || !squareNumber || !duration || !contactEmail) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
       });
     }
 
-    console.log(`🔄 Creating Stripe session for ${businessName}, Amount: £${amount}`);
+    console.log(`🔄 Creating Stripe session for Square #${squareNumber}, Amount: £${amount}`);
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -79,7 +108,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
           currency: 'gbp',
           product_data: {
             name: `ClickALinks - Square #${squareNumber}`,
-            description: `${duration} days advertising for ${businessName}`,
+            description: `${duration} days advertising campaign`,
           },
           unit_amount: Math.round(amount * 100),
         },
@@ -92,11 +121,10 @@ app.post('/api/create-checkout-session', async (req, res) => {
       metadata: {
         squareNumber: squareNumber.toString(),
         pageNumber: pageNumber.toString(),
-        businessName: businessName,
         duration: duration.toString(),
         contactEmail: contactEmail,
-        website: website,
-        dealDescription: dealDescription
+        website: website
+        // Removed dealDescription from metadata
       }
     });
 
@@ -121,4 +149,71 @@ app.post('/api/create-checkout-session', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 CORS enabled for: clickalinks-frontend.web.app`);
+});
+
+// ✅ GET PURCHASED SQUARES ENDPOINT
+app.get('/api/purchased-squares', async (req, res) => {
+  try {
+    // In a real app, you'd fetch from a database
+    // For now, we'll return a sample response
+    res.json({
+      success: true,
+      purchases: {},
+      message: 'Backend connected but no database setup yet'
+    });
+  } catch (error) {
+    console.error('Error fetching purchased squares:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+// Simple in-memory storage (replace with database later)
+let purchasedSquaresStorage = {};
+
+// ✅ GET ALL PURCHASED SQUARES
+app.get('/api/purchased-squares', async (req, res) => {
+  try {
+    console.log('📡 Fetching purchased squares from server storage');
+    res.json({
+      success: true,
+      purchases: purchasedSquaresStorage,
+      count: Object.keys(purchasedSquaresStorage).length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching purchased squares:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ SYNC PURCHASE TO SERVER
+app.post('/api/sync-purchase', async (req, res) => {
+  try {
+    const { squareNumber, purchaseData } = req.body;
+    
+    console.log(`💾 Syncing purchase for square ${squareNumber} to server`);
+    
+    purchasedSquaresStorage[squareNumber] = {
+      ...purchaseData,
+      lastSynced: new Date().toISOString()
+    };
+    
+    res.json({
+      success: true,
+      message: `Purchase for square ${squareNumber} synced to server`,
+      totalSquares: Object.keys(purchasedSquaresStorage).length
+    });
+    
+  } catch (error) {
+    console.error('Error syncing purchase:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
