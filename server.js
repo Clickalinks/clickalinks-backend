@@ -26,6 +26,22 @@ app.use(cors({
 
 app.use(express.json());
 
+// ✅ ROOT ROUTE - ADDED HERE
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    message: 'ClickaLinks Backend Server is running! 🚀',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      testCors: '/api/test-cors',
+      createCheckout: '/api/create-checkout-session',
+      checkSession: '/api/check-session/:id',
+      purchasedSquares: '/api/purchased-squares'
+    }
+  });
+});
+
 // ✅ HEALTH CHECK
 app.get('/health', (req, res) => {
   res.json({ 
@@ -146,29 +162,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 CORS enabled for: clickalinks-frontend.web.app`);
-});
-
-// ✅ GET PURCHASED SQUARES ENDPOINT
-app.get('/api/purchased-squares', async (req, res) => {
-  try {
-    // In a real app, you'd fetch from a database
-    // For now, we'll return a sample response
-    res.json({
-      success: true,
-      purchases: {},
-      message: 'Backend connected but no database setup yet'
-    });
-  } catch (error) {
-    console.error('Error fetching purchased squares:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
 // Simple in-memory storage (replace with database later)
 let purchasedSquaresStorage = {};
 
@@ -216,4 +209,9 @@ app.post('/api/sync-purchase', async (req, res) => {
       error: error.message
     });
   }
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 CORS enabled for: clickalinks-frontend.web.app`);
 });
