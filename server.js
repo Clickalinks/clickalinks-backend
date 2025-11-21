@@ -7,6 +7,13 @@ import Stripe from 'stripe';
 dotenv.config();
 
 const app = express();
+
+// 🔍 DEBUG: Check what key is being loaded
+console.log('🔑 Environment check:');
+console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
+console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
+console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
@@ -35,6 +42,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       testCors: '/api/test-cors',
+      testStripe: '/api/test-stripe',
       createCheckout: '/api/create-checkout-session',
       checkSession: '/api/check-session/:id',
       purchasedSquares: '/api/purchased-squares'
@@ -62,7 +70,47 @@ app.get('/api/test-cors', (req, res) => {
   });
 });
 
-// ✅ CHECK SESSION ENDPOINT (ADD THIS)
+// ✅ TEST STRIPE KEY ENDPOINT
+app.get('/api/test-stripe', async (req, res) => {
+  try {
+    console.log('🔑 Testing Stripe key...');
+    
+    // Try to make a simple Stripe API call
+    const balance = await stripe.balance.retrieve();
+    
+    res.json({
+      success: true,
+      message: 'Stripe key is VALID! 🎉',
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
+        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
+      },
+      balance: {
+        available: balance.available[0]?.amount || 0,
+        currency: balance.available[0]?.currency || 'gbp'
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Stripe key test failed:', error.message);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
+        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0,
+        fullKey: process.env.STRIPE_SECRET_KEY || 'NOT FOUND'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ✅ CHECK SESSION ENDPOINT
 app.get('/api/check-session/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -91,10 +139,11 @@ app.get('/api/check-session/:sessionId', async (req, res) => {
   }
 });
 
-// ✅ STRIPE PAYMENT ENDPOINT (UPDATED - NO DEAL DESCRIPTION)
+// ✅ STRIPE PAYMENT ENDPOINT
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     console.log('💰 Payment request received from:', req.headers.origin);
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
     
     const { 
       amount, 
@@ -104,11 +153,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
       contactEmail,
       pageNumber = 1,
       website = ''
-      // Removed dealDescription
     } = req.body;
 
     // Validate required fields
     if (!amount || !squareNumber || !duration || !contactEmail) {
+      console.log('❌ Missing required fields:', { amount, squareNumber, duration, contactEmail });
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
@@ -140,7 +189,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
         duration: duration.toString(),
         contactEmail: contactEmail,
         website: website
-        // Removed dealDescription from metadata
       }
     });
 
@@ -155,9 +203,15 @@ app.post('/api/create-checkout-session', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Stripe error:', error.message);
+    console.error('❌ Full error details:', error);
+    
     res.status(500).json({ 
       success: false,
-      error: error.message
+      error: error.message,
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY'
+      }
     });
   }
 });
