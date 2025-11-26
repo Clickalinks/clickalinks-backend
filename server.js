@@ -459,6 +459,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Virus scan endpoint available at: POST /api/scan-file`);
   console.log(`✅ Debug endpoint available at: POST /api/debug-purchase`);
   console.log(`✅ Email confirmation endpoint available at: POST /api/send-confirmation-email`);
+  console.log(`✅ Promo code validation available at: POST /api/promo-code/validate`);
+  console.log(`✅ Promo code bulk create available at: POST /api/promo-code/bulk-create`);
   console.log(`✅ Shuffle endpoint available at: POST /admin/shuffle`);
   console.log(`✅ Shuffle stats available at: GET /admin/shuffle/stats`);
   
