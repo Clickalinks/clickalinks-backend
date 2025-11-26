@@ -6,8 +6,44 @@
 
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import fs from 'fs';
 
-// Initialize Firestore if not already initialized
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : null;
+
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id // Explicitly set project ID
+    });
+  } else {
+    // Fallback: use default credentials (for local development)
+    // Try to read from GOOGLE_APPLICATION_CREDENTIALS file
+    try {
+      const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      if (credPath && fs.existsSync(credPath)) {
+        const credData = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+        admin.initializeApp({
+          credential: admin.credential.cert(credData),
+          projectId: credData.project_id
+        });
+      } else {
+        admin.initializeApp({
+          credential: admin.credential.applicationDefault()
+        });
+      }
+    } catch (e) {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault()
+      });
+    }
+  }
+}
+
+// Initialize Firestore
 const db = admin.firestore();
 const COLLECTION_NAME = 'promoCodes';
 
