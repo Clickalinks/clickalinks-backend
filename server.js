@@ -4,14 +4,36 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
 import shuffleRoutes from './routes/shuffle.js';
-import promoCodeRoutes from './routes/promoCode.js';
 import { sendAdConfirmationEmail } from './services/emailService.js';
 
 // Load environment variables
 dotenv.config();
 
 console.log('🔄 Starting server initialization...');
-console.log('✅ Promo code routes imported:', typeof promoCodeRoutes);
+
+// Dynamic import for promo code routes with error handling
+let promoCodeRoutes;
+try {
+  console.log('🔄 Attempting to dynamically import promo code routes...');
+  const promoCodeModule = await import('./routes/promoCode.js');
+  promoCodeRoutes = promoCodeModule.default;
+  console.log('✅ Promo code routes imported successfully:', typeof promoCodeRoutes);
+} catch (error) {
+  console.error('❌ CRITICAL: Failed to import promo code routes:', error.message);
+  console.error('❌ Error name:', error.name);
+  console.error('❌ Error stack:', error.stack);
+  // Create a dummy router that returns errors
+  const expressRouter = express.Router();
+  expressRouter.use((req, res) => {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Promo code service unavailable - check server logs',
+      details: error.message 
+    });
+  });
+  promoCodeRoutes = expressRouter;
+  console.log('⚠️ Using error router for promo code routes');
+}
 
 const app = express();
 
