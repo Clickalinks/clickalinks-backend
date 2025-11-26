@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import cors from 'cors';
 import {
   validatePromoCode,
   applyPromoCode,
@@ -22,6 +23,28 @@ console.log('✅ Promo code service functions imported:', {
 });
 
 const router = express.Router();
+
+// CORS configuration for promo code routes
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-API-Key'],
+  exposedHeaders: ['x-api-key', 'X-API-Key'],
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS to all promo code routes
+router.use(cors(corsOptions));
+
+// Handle OPTIONS requests explicitly
+router.options('*', cors(corsOptions));
 
 console.log('✅ Promo code router created');
 
