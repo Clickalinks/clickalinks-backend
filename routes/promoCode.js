@@ -12,7 +12,18 @@ import {
   getAllPromoCodes
 } from '../services/promoCodeService.js';
 
+console.log('🔄 Promo code routes module loaded');
+console.log('✅ Promo code service functions imported:', {
+  validatePromoCode: typeof validatePromoCode,
+  applyPromoCode: typeof applyPromoCode,
+  createPromoCode: typeof createPromoCode,
+  bulkCreatePromoCodes: typeof bulkCreatePromoCodes,
+  getAllPromoCodes: typeof getAllPromoCodes
+});
+
 const router = express.Router();
+
+console.log('✅ Promo code router created');
 
 /**
  * POST /api/promo-code/validate
@@ -184,5 +195,6 @@ router.get('/list', async (req, res) => {
   }
 });
 
+console.log('✅ All promo code routes defined, exporting router...');
 export default router;
 

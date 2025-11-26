@@ -10,6 +10,9 @@ import { sendAdConfirmationEmail } from './services/emailService.js';
 // Load environment variables
 dotenv.config();
 
+console.log('🔄 Starting server initialization...');
+console.log('✅ Promo code routes imported:', typeof promoCodeRoutes);
+
 const app = express();
 
 // 🔍 DEBUG: Check what key is being loaded
@@ -41,9 +44,11 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Shuffle admin routes (must be before other routes to avoid conflicts)
 app.use('/', shuffleRoutes);
+console.log('✅ Shuffle routes registered');
 
 // Promo code routes
 app.use('/api/promo-code', promoCodeRoutes);
+console.log('✅ Promo code routes registered at /api/promo-code');
 
 // Log all registered routes for debugging
 app.use((req, res, next) => {
