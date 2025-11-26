@@ -46,8 +46,8 @@ console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SE
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
-// CORS configuration
-app.use(cors({
+// CORS configuration - MUST be before routes
+const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://clickalinks-frontend.web.app',
@@ -56,9 +56,17 @@ app.use(cors({
     'https://www.clickalinks.com'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-API-Key'],
+  exposedHeaders: ['x-api-key', 'X-API-Key'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for all routes (CORS preflight)
+app.options('*', cors(corsOptions));
 
 // Increase body size limit for logo uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
