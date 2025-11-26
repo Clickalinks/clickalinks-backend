@@ -9,43 +9,60 @@ import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'fs';
 
 // Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    : null;
+let db;
+const COLLECTION_NAME = 'promoCodes';
 
-  if (serviceAccount) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id // Explicitly set project ID
-    });
-  } else {
-    // Fallback: use default credentials (for local development)
-    // Try to read from GOOGLE_APPLICATION_CREDENTIALS file
-    try {
-      const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-      if (credPath && fs.existsSync(credPath)) {
-        const credData = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-        admin.initializeApp({
-          credential: admin.credential.cert(credData),
-          projectId: credData.project_id
-        });
-      } else {
+try {
+  if (!admin.apps.length) {
+    console.log('🔧 Initializing Firebase Admin for promo codes...');
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+      : null;
+
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id // Explicitly set project ID
+      });
+      console.log('✅ Firebase Admin initialized with service account');
+    } else {
+      // Fallback: use default credentials (for local development)
+      // Try to read from GOOGLE_APPLICATION_CREDENTIALS file
+      try {
+        const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        if (credPath && fs.existsSync(credPath)) {
+          const credData = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+          admin.initializeApp({
+            credential: admin.credential.cert(credData),
+            projectId: credData.project_id
+          });
+          console.log('✅ Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS');
+        } else {
+          admin.initializeApp({
+            credential: admin.credential.applicationDefault()
+          });
+          console.log('✅ Firebase Admin initialized with application default');
+        }
+      } catch (e) {
         admin.initializeApp({
           credential: admin.credential.applicationDefault()
         });
+        console.log('✅ Firebase Admin initialized with application default (fallback)');
       }
-    } catch (e) {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault()
-      });
     }
+  } else {
+    console.log('✅ Firebase Admin already initialized');
   }
-}
 
-// Initialize Firestore
-const db = admin.firestore();
-const COLLECTION_NAME = 'promoCodes';
+  // Initialize Firestore
+  db = admin.firestore();
+  console.log('✅ Firestore initialized for promo codes');
+} catch (error) {
+  console.error('❌ CRITICAL: Failed to initialize Firebase Admin for promo codes:', error.message);
+  console.error('❌ Stack:', error.stack);
+  // Don't throw - let routes register but they'll fail gracefully with error messages
+  db = null;
+}
 
 /**
  * Validate a promo code
@@ -55,6 +72,11 @@ const COLLECTION_NAME = 'promoCodes';
  */
 export async function validatePromoCode(code, originalAmount = 0) {
   try {
+    if (!db) {
+      console.error('❌ Firestore not initialized for promo codes');
+      return { valid: false, error: 'Promo code service not available' };
+    }
+
     if (!code || typeof code !== 'string') {
       return {
         valid: false,
@@ -172,6 +194,11 @@ export async function validatePromoCode(code, originalAmount = 0) {
  */
 export async function applyPromoCode(code, purchaseId) {
   try {
+    if (!db) {
+      console.error('❌ Firestore not initialized for promo codes');
+      return { success: false, error: 'Promo code service not available' };
+    }
+
     const codeUpper = code.trim().toUpperCase();
     
     // Find the promo code
@@ -229,6 +256,11 @@ export async function applyPromoCode(code, purchaseId) {
  */
 export async function createPromoCode(promoData) {
   try {
+    if (!db) {
+      console.error('❌ Firestore not initialized for promo codes');
+      return { success: false, error: 'Promo code service not available' };
+    }
+
     const {
       code,
       discountType, // 'percent', 'fixed', 'free', 'free_days'
@@ -301,6 +333,11 @@ export async function createPromoCode(promoData) {
  */
 export async function bulkCreatePromoCodes(config) {
   try {
+    if (!db) {
+      console.error('❌ Firestore not initialized for promo codes');
+      return { success: false, error: 'Promo code service not available', created: 0, failed: 0, codes: [] };
+    }
+
     const {
       count = 200,
       prefix = 'FREE10',
@@ -368,6 +405,11 @@ export async function bulkCreatePromoCodes(config) {
  */
 export async function getAllPromoCodes(filters = {}) {
   try {
+    if (!db) {
+      console.error('❌ Firestore not initialized for promo codes');
+      return { success: false, error: 'Promo code service not available', codes: [] };
+    }
+
     let query = db.collection(COLLECTION_NAME);
 
     if (filters.active !== undefined) {
