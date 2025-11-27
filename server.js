@@ -15,6 +15,57 @@ console.log('🔄 Starting server initialization...');
 
 const app = express();
 
+// CRITICAL: Handle OPTIONS requests at the VERY TOP, before ANY other middleware
+// This must be the first thing Express processes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ];
+  
+  const allowedHeaders = [
+    'Content-Type', 
+    'Authorization', 
+    'x-api-key', 
+    'X-API-Key',
+    'X-API-KEY',
+    'x-API-key',
+    'X-api-key',
+    'Accept',
+    'Origin',
+    'X-Requested-With',
+    'Access-Control-Request-Headers',
+    'Access-Control-Request-Method'
+  ];
+  
+  const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'];
+  
+  // Set CORS headers for allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Set all required CORS headers
+  res.setHeader('Access-Control-Allow-Methods', allowedMethods.join(', '));
+  res.setHeader('Access-Control-Allow-Headers', allowedHeaders.join(', '));
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Log for debugging
+  console.log('🚨 TOP-LEVEL OPTIONS HANDLER CALLED:', {
+    origin: origin,
+    path: req.path,
+    requestedHeaders: req.headers['access-control-request-headers'] || '',
+    allowedHeaders: allowedHeaders.join(', ')
+  });
+  
+  return res.status(204).end();
+});
+
 // 🔍 DEBUG: Check what key is being loaded
 console.log('🔑 Environment check:');
 console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
