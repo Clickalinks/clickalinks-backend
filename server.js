@@ -79,7 +79,7 @@ app.options('*', (req, res) => {
   res.sendStatus(204);
 });
 
-// Add CORS headers to all responses (backup - ensures headers are always set)
+// CORS headers middleware - ensures headers are set for all responses
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
@@ -90,7 +90,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Credentials', 'true');
   }
   
-  // Handle preflight OPTIONS requests explicitly
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
     res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
     res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
@@ -98,7 +98,7 @@ app.use((req, res, next) => {
     return res.sendStatus(204);
   }
   
-  // Set CORS headers for actual requests too
+  // Set CORS headers for actual requests
   res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
   res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
   

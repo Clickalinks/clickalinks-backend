@@ -123,52 +123,9 @@ router.get('/admin/shuffle/health', async (req, res) => {
   }
 });
 
-/**
- * Handle OPTIONS requests for CORS preflight
- * This ensures CORS headers are properly set for preflight requests
- */
-router.options('/admin/shuffle', (req, res) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ];
-  
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, Accept, Origin, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(204);
-});
-
-router.options('/admin/shuffle/stats', (req, res) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ];
-  
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, Accept, Origin, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(204);
-});
-
 // Note: OPTIONS requests are handled by main server.js CORS middleware
-// The main app.options('*') handler covers all routes including /admin/shuffle
+// The main app.options('*') handler in server.js covers all routes including /admin/shuffle
+// No need for route-specific OPTIONS handlers here
 
 export default router;
 
