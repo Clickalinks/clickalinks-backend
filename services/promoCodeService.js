@@ -1,12 +1,10 @@
 /**
  * Promo Code Service
  * Manages promotion codes/coupons with Firestore storage
- * Supports usage limits, expiry dates, and different discount types
  */
 
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
-import fs from 'fs';
 
 // Initialize Firebase Admin if not already initialized
 let db;
@@ -22,16 +20,15 @@ try {
     if (serviceAccount) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id // Explicitly set project ID
+        projectId: serviceAccount.project_id
       });
       console.log('✅ Firebase Admin initialized with service account');
     } else {
-      // Fallback: use default credentials (for local development)
-      // Try to read from GOOGLE_APPLICATION_CREDENTIALS file
+      // Fallback: use default credentials
       try {
         const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-        if (credPath && fs.existsSync(credPath)) {
-          const credData = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+        if (credPath && require('fs').existsSync(credPath)) {
+          const credData = JSON.parse(require('fs').readFileSync(credPath, 'utf8'));
           admin.initializeApp({
             credential: admin.credential.cert(credData),
             projectId: credData.project_id
@@ -59,8 +56,6 @@ try {
   console.log('✅ Firestore initialized for promo codes');
 } catch (error) {
   console.error('❌ CRITICAL: Failed to initialize Firebase Admin for promo codes:', error.message);
-  console.error('❌ Stack:', error.stack);
-  // Don't throw - let routes register but they'll fail gracefully with error messages
   db = null;
 }
 
@@ -153,8 +148,7 @@ export async function validatePromoCode(code, originalAmount = 0) {
     } else if (promoData.discountType === 'free_days') {
       // Free days (e.g., 10 free days)
       freeDays = promoData.discountValue || 0;
-      // For free days, we'll handle this in the frontend by extending duration
-      discountAmount = 0; // Will be calculated based on days
+      discountAmount = 0; // No price discount
       finalAmount = originalAmount; // Price stays same, but duration extends
     } else if (promoData.discountType === 'free') {
       // 100% off (free purchase)
@@ -327,7 +321,7 @@ export async function createPromoCode(promoData) {
 }
 
 /**
- * Bulk create promo codes (for campaigns like 200 free days)
+ * Bulk create promo codes
  * @param {Object} config - Configuration for bulk creation
  * @returns {Object} - Result with created codes
  */
@@ -342,9 +336,9 @@ export async function bulkCreatePromoCodes(config) {
       count = 200,
       prefix = 'FREE10',
       discountType = 'free_days',
-      discountValue = 10, // 10 free days
+      discountValue = 10,
       description = '10 Free Days Campaign',
-      maxUses = 1, // Each code can only be used once
+      maxUses = 1,
       expiryDate = null,
       startDate = null
     } = config;
@@ -355,7 +349,7 @@ export async function bulkCreatePromoCodes(config) {
     for (let i = 0; i < count; i++) {
       // Generate unique code: PREFIX + random 6 characters
       const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const code = `${prefix}${randomSuffix}`;
+      const code = `${prefix}-${randomSuffix}`;
 
       const result = await createPromoCode({
         code,
@@ -439,7 +433,7 @@ export async function getAllPromoCodes(filters = {}) {
 
     return {
       success: true,
-      promoCodes,
+      codes: promoCodes,
       count: promoCodes.length
     };
 

@@ -10,26 +10,26 @@ const router = express.Router();
 
 /**
  * Middleware to verify admin authorization
- * Uses ADMIN_SECRET_KEY from environment variables
+ * Uses ADMIN_API_KEY from environment variables (same as promo code routes)
  */
 function verifyAdminAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  // Check for API key in header (x-api-key) or Authorization header
+  const apiKey = req.headers['x-api-key'] || 
+                 req.headers['X-API-Key'] ||
+                 (req.headers.authorization ? req.headers.authorization.replace('Bearer ', '') : null);
   
-  if (!adminSecret) {
-    console.error('❌ ADMIN_SECRET_KEY not configured in environment variables');
+  // Use ADMIN_API_KEY (same as promo code routes) or fallback to ADMIN_SECRET_KEY for backward compatibility
+  const adminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_SECRET_KEY;
+  
+  if (!adminKey) {
+    console.error('❌ ADMIN_API_KEY or ADMIN_SECRET_KEY not configured in environment variables');
     return res.status(500).json({
       success: false,
       error: 'Admin authentication not configured'
     });
   }
   
-  // Check for Bearer token or direct secret in Authorization header
-  const providedSecret = authHeader 
-    ? authHeader.replace('Bearer ', '').replace('Secret ', '')
-    : req.query.secret || req.body.secret;
-  
-  if (!providedSecret || providedSecret !== adminSecret) {
+  if (!apiKey || apiKey !== adminKey) {
     console.warn('⚠️ Unauthorized shuffle attempt:', {
       ip: req.ip,
       userAgent: req.get('user-agent'),
@@ -38,7 +38,7 @@ function verifyAdminAuth(req, res, next) {
     
     return res.status(401).json({
       success: false,
-      error: 'Unauthorized: Invalid admin secret'
+      error: 'Unauthorized: Invalid admin API key'
     });
   }
   
@@ -122,6 +122,53 @@ router.get('/admin/shuffle/health', async (req, res) => {
     });
   }
 });
+
+/**
+ * Handle OPTIONS requests for CORS preflight
+ * This ensures CORS headers are properly set for preflight requests
+ */
+router.options('/admin/shuffle', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ];
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, Accept, Origin, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(204);
+});
+
+router.options('/admin/shuffle/stats', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, Accept, Origin, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(204);
+});
+
+// Note: OPTIONS requests are handled by main server.js CORS middleware
+// The main app.options('*') handler covers all routes including /admin/shuffle
 
 export default router;
 

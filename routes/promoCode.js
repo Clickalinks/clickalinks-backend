@@ -13,15 +13,6 @@ import {
   getAllPromoCodes
 } from '../services/promoCodeService.js';
 
-console.log('🔄 Promo code routes module loaded');
-console.log('✅ Promo code service functions imported:', {
-  validatePromoCode: typeof validatePromoCode,
-  applyPromoCode: typeof applyPromoCode,
-  createPromoCode: typeof createPromoCode,
-  bulkCreatePromoCodes: typeof bulkCreatePromoCodes,
-  getAllPromoCodes: typeof getAllPromoCodes
-});
-
 const router = express.Router();
 
 // CORS configuration for promo code routes
@@ -42,11 +33,7 @@ const corsOptions = {
 
 // Apply CORS to all promo code routes
 router.use(cors(corsOptions));
-
-// Handle OPTIONS requests explicitly
 router.options('*', cors(corsOptions));
-
-console.log('✅ Promo code router created');
 
 /**
  * POST /api/promo-code/validate
@@ -159,7 +146,6 @@ router.post('/create', async (req, res) => {
  * POST /api/promo-code/bulk-create
  * Bulk create promo codes (for campaigns)
  * Requires ADMIN_API_KEY in header
- * Body: { count: number, prefix: string, discountType: string, discountValue: number, ... }
  */
 router.post('/bulk-create', async (req, res) => {
   try {
@@ -218,6 +204,29 @@ router.get('/list', async (req, res) => {
   }
 });
 
-console.log('✅ All promo code routes defined, exporting router...');
+/**
+ * Handle OPTIONS requests for CORS preflight
+ * This ensures CORS headers are properly set for preflight requests
+ */
+router.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, Accept, Origin, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(204);
+});
+
 export default router;
 

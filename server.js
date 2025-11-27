@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
 import shuffleRoutes from './routes/shuffle.js';
+import promoCodeRoutes from './routes/promoCode.js';
 import { sendAdConfirmationEmail } from './services/emailService.js';
 
 // Load environment variables
@@ -11,29 +12,6 @@ dotenv.config();
 
 console.log('🔄 Starting server initialization...');
 
-// Dynamic import for promo code routes with error handling
-let promoCodeRoutes;
-try {
-  console.log('🔄 Attempting to dynamically import promo code routes...');
-  const promoCodeModule = await import('./routes/promoCode.js');
-  promoCodeRoutes = promoCodeModule.default;
-  console.log('✅ Promo code routes imported successfully:', typeof promoCodeRoutes);
-} catch (error) {
-  console.error('❌ CRITICAL: Failed to import promo code routes:', error.message);
-  console.error('❌ Error name:', error.name);
-  console.error('❌ Error stack:', error.stack);
-  // Create a dummy router that returns errors
-  const expressRouter = express.Router();
-  expressRouter.use((req, res) => {
-    res.status(500).json({ 
-      success: false, 
-      error: 'Promo code service unavailable - check server logs',
-      details: error.message 
-    });
-  });
-  promoCodeRoutes = expressRouter;
-  console.log('⚠️ Using error router for promo code routes');
-}
 
 const app = express();
 
@@ -56,17 +34,76 @@ const corsOptions = {
     'https://www.clickalinks.com'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-API-Key'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-api-key', 
+    'X-API-Key',
+    'X-API-KEY',
+    'Accept',
+    'Origin',
+    'X-Requested-With'
+  ],
   exposedHeaders: ['x-api-key', 'X-API-Key'],
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Explicit OPTIONS handler for all routes (CORS preflight)
-app.options('*', cors(corsOptions));
+// Explicit OPTIONS handler for all routes (CORS preflight) - MUST be before other routes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = corsOptions.origin;
+  
+  // Log for debugging
+  console.log('🔍 CORS Preflight:', {
+    origin: origin,
+    allowed: allowedOrigins.includes(origin),
+    path: req.path
+  });
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (origin) {
+    // For debugging - log if origin is not in allowed list
+    console.warn('⚠️ CORS: Origin not allowed:', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
+  res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  res.sendStatus(204);
+});
+
+// Add CORS headers to all responses (backup - ensures headers are always set)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = corsOptions.origin;
+  
+  // Set CORS headers for all requests
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Handle preflight OPTIONS requests explicitly
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
+    res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
+    res.header('Access-Control-Max-Age', '86400');
+    return res.sendStatus(204);
+  }
+  
+  // Set CORS headers for actual requests too
+  res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
+  res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
+  
+  next();
+});
 
 // Increase body size limit for logo uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
@@ -100,11 +137,6 @@ app.get('/', (req, res) => {
       checkSession: '/api/check-session/:id',
       purchasedSquares: '/api/purchased-squares',
       sendConfirmationEmail: '/api/send-confirmation-email',
-      validatePromoCode: '/api/promo-code/validate',
-      applyPromoCode: '/api/promo-code/apply',
-      createPromoCode: '/api/promo-code/create',
-      bulkCreatePromoCodes: '/api/promo-code/bulk-create',
-      listPromoCodes: '/api/promo-code/list'
     }
   });
 });
