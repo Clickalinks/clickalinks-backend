@@ -24,17 +24,18 @@ console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SE
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
-// CRITICAL: Handle OPTIONS requests FIRST, before cors() middleware
-// This ensures x-api-key header is always allowed in preflight responses
-app.options('*', (req, res) => {
+// CRITICAL: Manual CORS handling - NO cors() middleware to avoid conflicts
+// Handle ALL requests including OPTIONS preflight
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://clickalinks-frontend.web.app',
+  'https://clickalinks-frontend.firebaseapp.com',
+  'https://clickalinks-frontend-1.onrender.com',
+  'https://www.clickalinks.com'
+];
+
+app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ];
   
   // Set CORS headers for allowed origins
   if (origin && allowedOrigins.includes(origin)) {
@@ -42,47 +43,31 @@ app.options('*', (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   
-  // CRITICAL: Explicitly allow x-api-key header (all case variations)
+  // CRITICAL: Handle OPTIONS preflight requests
+  if (req.method === 'OPTIONS') {
+    // CRITICAL: Explicitly allow x-api-key header (all case variations)
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    console.log('🚨 OPTIONS preflight handled:', {
+      origin: origin,
+      path: req.path,
+      requestedHeaders: req.headers['access-control-request-headers'] || '',
+      allowedHeaders: 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With'
+    });
+    
+    return res.status(204).end();
+  }
+  
+  // For non-OPTIONS requests, set CORS headers and continue
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With');
-  res.setHeader('Access-Control-Max-Age', '86400');
   
-  console.log('🚨 OPTIONS preflight handled:', {
-    origin: origin,
-    path: req.path,
-    requestedHeaders: req.headers['access-control-request-headers'] || ''
-  });
-  
-  return res.status(204).end();
+  next();
 });
 
-// CORS middleware for non-OPTIONS requests
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'x-api-key',
-    'X-API-Key',
-    'X-API-KEY',
-    'x-API-key',
-    'X-api-key',
-    'Accept',
-    'Origin',
-    'X-Requested-With'
-  ],
-  exposedHeaders: ['x-api-key', 'X-API-Key']
-}));
-
-console.log('✅ CORS configured: OPTIONS handler + cors() middleware');
+console.log('✅ CORS configured: Manual handling (no cors() middleware)');
 
 // Increase body size limit for logo uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
