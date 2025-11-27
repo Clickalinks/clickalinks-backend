@@ -41,19 +41,21 @@ const corsOptions = {
     'x-api-key', 
     'X-API-Key',
     'X-API-KEY',
+    'x-API-key',
+    'X-api-key',
     'Accept',
     'Origin',
-    'X-Requested-With'
+    'X-Requested-With',
+    'Access-Control-Request-Headers',
+    'Access-Control-Request-Method'
   ],
   exposedHeaders: ['x-api-key', 'X-API-Key'],
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Explicit OPTIONS handler for all routes (CORS preflight) - MUST be before other routes
+// CRITICAL: Handle OPTIONS preflight FIRST, before cors() middleware
+// This ensures our custom headers are set correctly
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
@@ -62,7 +64,8 @@ app.options('*', (req, res) => {
   console.log('🔍 CORS Preflight:', {
     origin: origin,
     allowed: allowedOrigins.includes(origin),
-    path: req.path
+    path: req.path,
+    requestedHeaders: req.headers['access-control-request-headers']
   });
   
   if (origin && allowedOrigins.includes(origin)) {
@@ -72,14 +75,26 @@ app.options('*', (req, res) => {
     console.warn('⚠️ CORS: Origin not allowed:', origin);
   }
   
+  // CRITICAL: Set all CORS headers explicitly
   res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
   res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  // Log what headers we're sending
+  console.log('✅ CORS Headers set:', {
+    'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
+    'Access-Control-Allow-Methods': corsOptions.methods.join(', '),
+    'Access-Control-Allow-Headers': corsOptions.allowedHeaders.join(', ')
+  });
+  
   res.sendStatus(204);
 });
 
-// CORS headers middleware - ensures headers are set for all responses
+// Apply CORS middleware for all other requests (non-OPTIONS)
+app.use(cors(corsOptions));
+
+// Backup CORS headers middleware - ensures headers are always set for actual requests
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
@@ -88,14 +103,6 @@ app.use((req, res, next) => {
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  // Handle preflight OPTIONS requests
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-    res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
-    res.header('Access-Control-Max-Age', '86400');
-    return res.sendStatus(204);
   }
   
   // Set CORS headers for actual requests

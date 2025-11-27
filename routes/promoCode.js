@@ -31,9 +31,8 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Apply CORS to all promo code routes
-router.use(cors(corsOptions));
-router.options('*', cors(corsOptions));
+// Note: CORS is handled by main server.js middleware
+// No need for route-specific CORS here - it's already applied globally
 
 /**
  * POST /api/promo-code/validate
