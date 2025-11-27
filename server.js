@@ -3,9 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
+import { sendAdConfirmationEmail } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
-import { sendAdConfirmationEmail } from './services/emailService.js';
 
 // Load environment variables
 dotenv.config();
@@ -59,40 +59,46 @@ const corsOptions = {
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
+  const requestedHeaders = req.headers['access-control-request-headers'] || '';
   
   // Log for debugging
-  console.log('🔍 CORS Preflight:', {
+  console.log('🔍 CORS Preflight OPTIONS:', {
     origin: origin,
-    allowed: allowedOrigins.includes(origin),
+    allowed: origin ? allowedOrigins.includes(origin) : false,
     path: req.path,
-    requestedHeaders: req.headers['access-control-request-headers']
+    requestedHeaders: requestedHeaders
   });
   
+  // Set origin if allowed
   if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (origin) {
-    // For debugging - log if origin is not in allowed list
-    console.warn('⚠️ CORS: Origin not allowed:', origin);
+    console.warn('⚠️ CORS: Origin not allowed:', origin, 'Allowed:', allowedOrigins);
   }
   
-  // CRITICAL: Set all CORS headers explicitly
-  res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-  res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  // CRITICAL: Set all required CORS headers explicitly
+  // Use setHeader instead of header() to ensure they're set
+  res.setHeader('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
+  res.setHeader('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
   
-  // Log what headers we're sending
-  console.log('✅ CORS Headers set:', {
+  // Log what we're sending
+  console.log('✅ CORS Preflight Response Headers:', {
     'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
     'Access-Control-Allow-Methods': corsOptions.methods.join(', '),
     'Access-Control-Allow-Headers': corsOptions.allowedHeaders.join(', ')
   });
   
-  res.sendStatus(204);
+  res.status(204).end();
 });
 
 // Apply CORS middleware for all other requests (non-OPTIONS)
-app.use(cors(corsOptions));
+// Disable preflight handling since we handle it manually above
+app.use(cors({
+  ...corsOptions,
+  preflightContinue: false
+}));
 
 // Backup CORS headers middleware - ensures headers are always set for actual requests
 app.use((req, res, next) => {
@@ -116,7 +122,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Shuffle admin routes (must be before other routes to avoid conflicts)
+// Shuffle admin routes
 app.use('/', shuffleRoutes);
 console.log('✅ Shuffle routes registered');
 
