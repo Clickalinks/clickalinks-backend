@@ -65,5 +65,11 @@ node_modules/
 # dotenv environment variables file
 .env
 
+# Firebase service account (contains sensitive credentials)
+firebase-service-account.json
+*.json
+!package.json
+!package-lock.json
+
 # dataconnect generated files
 .dataconnect
