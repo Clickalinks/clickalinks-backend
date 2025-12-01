@@ -23,16 +23,20 @@ if (!admin.apps.length) {
       try {
         let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
         
-        // Check if it's Base64 encoded (common pattern: starts with valid base64 chars, ends with =)
-        if (jsonString.match(/^[A-Za-z0-9+/]+=*$/) && jsonString.length > 100) {
+        // CRITICAL: Check for Base64 FIRST before trying to parse as JSON
+        // Base64 strings are typically long and contain only A-Z, a-z, 0-9, +, /, and = characters
+        const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
+        const looksLikeBase64 = base64Pattern.test(jsonString) && jsonString.length > 100 && !jsonString.startsWith('{');
+        
+        if (looksLikeBase64) {
           try {
-            // Try to decode Base64
+            // Decode Base64
             const decoded = Buffer.from(jsonString, 'base64').toString('utf-8');
             jsonString = decoded;
             console.log('📦 Detected Base64 encoded JSON, decoded successfully');
           } catch (base64Error) {
-            // Not Base64, continue with original string
-            console.log('ℹ️ Not Base64, treating as raw JSON');
+            console.error('❌ Failed to decode Base64:', base64Error.message);
+            throw new Error('Invalid Base64 encoding');
           }
         }
         
@@ -42,7 +46,7 @@ if (!admin.apps.length) {
           jsonString = jsonString.slice(1, -1);
         }
         
-        // Try to parse
+        // Now try to parse as JSON
         const serviceAccount = JSON.parse(jsonString);
         
         // Validate required fields
