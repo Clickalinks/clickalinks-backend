@@ -21,12 +21,13 @@ if (!admin.apps.length) {
     // Priority 1: Use service account from environment variable (JSON string)
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      const projectId = serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID
+        projectId: projectId // ALWAYS set projectId explicitly
       });
       console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT env var');
-      console.log('🔑 Project ID:', serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'Not set');
+      console.log('🔑 Project ID:', projectId);
     } 
     // Priority 2: Use service account JSON file (for local development)
     else {
@@ -53,19 +54,17 @@ if (!admin.apps.length) {
           });
           console.log('✅ Firebase Admin initialized from environment variables');
         } 
-        // Priority 4: Fallback to default credentials (with explicit project ID if available)
+        // Priority 4: Fallback to default credentials (with explicit project ID)
         else {
-          const initOptions = {};
-          if (process.env.FIREBASE_PROJECT_ID) {
-            initOptions.projectId = process.env.FIREBASE_PROJECT_ID;
-          }
-          admin.initializeApp(initOptions);
+          // Always set projectId - use environment variable or default to known project ID
+          const projectId = process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
+          admin.initializeApp({
+            projectId: projectId // ALWAYS set projectId explicitly
+          });
           console.log('✅ Firebase Admin initialized with default credentials');
-          if (process.env.FIREBASE_PROJECT_ID) {
-            console.log('🔑 Project ID:', process.env.FIREBASE_PROJECT_ID);
-          } else {
-            console.warn('⚠️ WARNING: Project ID not set - Firestore queries may fail!');
-            console.warn('⚠️ Set FIREBASE_PROJECT_ID environment variable on Render.com');
+          console.log('🔑 Project ID:', projectId);
+          if (!process.env.FIREBASE_PROJECT_ID) {
+            console.warn('⚠️ Using default project ID. Set FIREBASE_PROJECT_ID on Render.com for production.');
           }
         }
       }
