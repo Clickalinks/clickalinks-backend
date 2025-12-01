@@ -44,69 +44,67 @@ if (!admin.apps.length) {
       } catch (fileError) {
         console.error('❌ Error loading service account file:', fileError.message);
         
-        // Priority 3: Use individual environment variables (only if all required fields are present and valid)
-        // Use try-catch to safely check environment variables
+        // Priority 3: Use individual environment variables (SKIP on Render.com - use default credentials instead)
+        // On Render.com, we should use default credentials (Priority 4) or service account JSON (Priority 1)
+        const isRender = process.env.RENDER || process.env.RENDER_SERVICE_NAME;
         let useIndividualEnvVars = false;
         let projectId = process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
-        let clientEmail = null;
-        let privateKey = null;
         
-        try {
-          // Safely check and validate environment variables
-          const envProjectId = process.env.FIREBASE_PROJECT_ID;
-          const envClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-          const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
-          
-          const hasProjectId = envProjectId && typeof envProjectId === 'string' && envProjectId.trim().length > 0;
-          const hasClientEmail = envClientEmail && typeof envClientEmail === 'string' && envClientEmail.trim().length > 0;
-          const hasPrivateKey = envPrivateKey && typeof envPrivateKey === 'string' && envPrivateKey.trim().length > 0;
-          
-          if (hasProjectId && hasClientEmail && hasPrivateKey) {
-            // Process private key
-            privateKey = envPrivateKey.replace(/\\n/g, '\n').trim();
-            
-            // Validate private key format - must contain BEGIN marker
-            if (!privateKey.includes('BEGIN PRIVATE KEY') && !privateKey.includes('BEGIN RSA PRIVATE KEY')) {
-              console.warn('⚠️ Private key format validation failed - missing BEGIN marker');
-              useIndividualEnvVars = false;
-            } else if (privateKey.length < 100) {
-              console.warn('⚠️ Private key appears too short to be valid');
-              useIndividualEnvVars = false;
-            } else {
-              // All validations passed
-              projectId = envProjectId.trim();
-              clientEmail = envClientEmail.trim();
-              useIndividualEnvVars = true;
-            }
-          }
-        } catch (validationError) {
-          console.error('❌ Error validating environment variables:', validationError.message);
-          useIndividualEnvVars = false;
-        }
-        
-        // Try Priority 3 if validation passed
-        if (useIndividualEnvVars) {
+        // Skip Priority 3 on Render.com - go straight to default credentials
+        if (!isRender) {
           try {
-            admin.initializeApp({
-              credential: admin.credential.cert({
-                projectId: projectId,
-                clientEmail: clientEmail,
-                privateKey: privateKey
-              }),
-              projectId: projectId
-            });
-            console.log('✅ Firebase Admin initialized from environment variables');
-            console.log('🔑 Project ID:', projectId);
-          } catch (credError) {
-            console.error('❌ Error initializing with individual env vars:', credError.message);
-            console.error('❌ Error code:', credError.code || 'unknown');
-            // Fall through to Priority 4
+            // Safely check and validate environment variables
+            const envProjectId = process.env.FIREBASE_PROJECT_ID;
+            const envClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+            const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+            
+            const hasProjectId = envProjectId && typeof envProjectId === 'string' && envProjectId.trim().length > 0;
+            const hasClientEmail = envClientEmail && typeof envClientEmail === 'string' && envClientEmail.trim().length > 0;
+            const hasPrivateKey = envPrivateKey && typeof envPrivateKey === 'string' && envPrivateKey.trim().length > 0;
+            
+            if (hasProjectId && hasClientEmail && hasPrivateKey) {
+              // Process private key
+              const privateKey = envPrivateKey.replace(/\\n/g, '\n').trim();
+              
+              // STRICT validation: must have BEGIN, END, and be substantial length
+              const hasBegin = privateKey.includes('BEGIN PRIVATE KEY') || privateKey.includes('BEGIN RSA PRIVATE KEY');
+              const hasEnd = privateKey.includes('END PRIVATE KEY') || privateKey.includes('END RSA PRIVATE KEY');
+              const isValidLength = privateKey.length > 1000; // Private keys are typically 1500+ characters
+              
+              if (hasBegin && hasEnd && isValidLength) {
+                // All validations passed - try to use individual env vars
+                try {
+                  admin.initializeApp({
+                    credential: admin.credential.cert({
+                      projectId: envProjectId.trim(),
+                      clientEmail: envClientEmail.trim(),
+                      privateKey: privateKey
+                    }),
+                    projectId: envProjectId.trim()
+                  });
+                  console.log('✅ Firebase Admin initialized from environment variables');
+                  console.log('🔑 Project ID:', envProjectId.trim());
+                  useIndividualEnvVars = true;
+                } catch (credError) {
+                  console.error('❌ Error initializing with individual env vars:', credError.message);
+                  console.error('❌ Error code:', credError.code || 'unknown');
+                  useIndividualEnvVars = false;
+                }
+              } else {
+                console.warn('⚠️ Private key validation failed - missing BEGIN/END markers or too short');
+                useIndividualEnvVars = false;
+              }
+            }
+          } catch (validationError) {
+            console.error('❌ Error validating environment variables:', validationError.message);
             useIndividualEnvVars = false;
           }
+        } else {
+          console.log('ℹ️ Running on Render.com - skipping individual env vars, using default credentials');
         }
         
         // Priority 4: Fallback to default credentials (with explicit project ID)
-        // Only initialize if Priority 3 didn't succeed
+        // This is the preferred method for Render.com deployments
         if (!useIndividualEnvVars && !admin.apps.length) {
           try {
             admin.initializeApp({
