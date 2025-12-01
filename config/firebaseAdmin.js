@@ -38,15 +38,21 @@ if (!admin.apps.length) {
             console.log('🔍 Decoded first 50 chars:', decoded.substring(0, 50));
             
             // Verify it decoded to valid JSON-like content
-            if (decoded.trim().startsWith('{') || decoded.trim().startsWith('[')) {
-              jsonString = decoded;
+            const trimmedDecoded = decoded.trim();
+            if (trimmedDecoded.startsWith('{') || trimmedDecoded.startsWith('[')) {
+              jsonString = trimmedDecoded; // Use trimmed version
               console.log('✅ Base64 detected and decoded successfully!');
             } else {
-              console.log('⚠️ Base64 decode didn\'t produce JSON, will try raw parse');
+              console.error('❌ ERROR: Base64 decode did NOT produce valid JSON!');
+              console.error('❌ Decoded result does not start with { or [');
+              console.error('❌ Decoded first 100 chars:', decoded.substring(0, 100));
+              console.error('❌ This usually means the Base64 string is corrupted or incomplete');
+              throw new Error('Base64 decode did not produce valid JSON - decoded result does not start with { or [');
             }
           } catch (base64Error) {
-            console.log('⚠️ Base64 decode failed:', base64Error.message, '- treating as raw JSON');
-            // Continue with original string - might be raw JSON
+            console.error('❌ Base64 decode failed:', base64Error.message);
+            // Re-throw to prevent trying to parse invalid data
+            throw base64Error;
           }
         } else {
           console.log('ℹ️ String starts with { or [, treating as raw JSON');
