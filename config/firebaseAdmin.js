@@ -86,7 +86,6 @@ if (!admin.apps.length) {
     if (!admin.apps.length) {
       // Priority 2: Use service account JSON file (for local development)
       try {
-      try {
         const serviceAccountPath = join(__dirname, '..', 'firebase-service-account.json');
         console.log('📁 Looking for service account file at:', serviceAccountPath);
         const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
