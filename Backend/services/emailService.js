@@ -182,7 +182,7 @@ export async function sendAdConfirmationEmail(purchaseData) {
           </ul>
 
           <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app'}/page${pageNumber}" class="button">View Your Live Ad</a>
+            <a href="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/page${pageNumber}" class="button">View Your Live Ad</a>
           </div>
 
           <div class="footer">
@@ -218,7 +218,7 @@ What Happens Next?
 - Fair placement: Your position may change during shuffles
 - Active duration: Your ad will remain active for ${selectedDuration} days
 
-View your live ad: ${process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app'}/page${pageNumber}
+View your live ad: ${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/page${pageNumber}
 
 Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}
 

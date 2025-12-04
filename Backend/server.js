@@ -300,6 +300,18 @@ app.post('/api/create-checkout-session',
     
     console.log(`🔄 Creating Stripe session for Square #${squareNumber}, Amount: £${amount}`);
     
+    // CRITICAL: Normalize FRONTEND_URL to remove www. prefix (Firebase Hosting SSL doesn't support www subdomain)
+    let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    // Remove www. prefix if present (Firebase Hosting SSL certificates don't cover www subdomain)
+    if (frontendUrl.includes('www.clickalinks-frontend.web.app')) {
+      frontendUrl = frontendUrl.replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app');
+      console.log('⚠️ Removed www. prefix from FRONTEND_URL for SSL compatibility');
+    }
+    // Ensure https:// for production
+    if (frontendUrl.includes('clickalinks-frontend.web.app') && !frontendUrl.startsWith('https://')) {
+      frontendUrl = frontendUrl.replace('http://', 'https://');
+    }
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -314,8 +326,8 @@ app.post('/api/create-checkout-session',
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/`,
+      success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/`,
       customer_email: contactEmail,
       metadata: {
         squareNumber: squareNumber.toString(),
