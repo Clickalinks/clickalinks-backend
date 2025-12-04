@@ -631,10 +631,6 @@ const Payment = () => {
                       e.stopPropagation();
                       removePromoCode();
                     }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
                     disabled={isProcessing}
                   >
                     Remove
@@ -647,10 +643,6 @@ const Payment = () => {
                       e.preventDefault();
                       e.stopPropagation();
                       handlePromoCode();
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
                     }}
                     disabled={isProcessing}
                   >
