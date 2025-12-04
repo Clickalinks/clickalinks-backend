@@ -151,9 +151,9 @@ export async function performGlobalShuffle() {
     
     console.log(`📊 Found ${purchases.length} valid active purchases to shuffle`);
     console.log(`📄 Page distribution:`, pageDistribution);
-    console.log(`📋 Purchases by page:`, Object.entries(pageDistribution)
-      .map(([page, count]) => `Page ${page}: ${count}`)
-      .join(', '));
+    console.log(`📋 Purchases by page:`, Object.entries(pageDistribution).map(([page, count]) => `Page ${page}: ${count}`).join(', '));
+    
+    // Ensure db variable is only declared once at the top of the function
     
     // Limit to 2000 purchases (one per square)
     if (purchases.length > 2000) {
