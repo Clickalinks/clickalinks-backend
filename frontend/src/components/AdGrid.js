@@ -486,6 +486,22 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     }
   }, [start, end, pageNumber]);
 
+  // Check if user is authenticated as admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { checkAdminAuth } = await import('../utils/adminAuth');
+        const authStatus = await checkAdminAuth();
+        setIsAdmin(authStatus);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, []);
+
   // Manual shuffle handler
   const handleManualShuffle = useCallback(async () => {
     const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
@@ -496,6 +512,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
     if (!adminHeaders['x-admin-token']) {
       alert('⚠️ Not authenticated. Please log in to the admin dashboard to shuffle.');
+      navigate('/admin');
       return;
     }
 
@@ -912,13 +929,15 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
                 ⏱️ {Math.floor(timeUntilShuffle / 3600)}:{(Math.floor((timeUntilShuffle % 3600) / 60)).toString().padStart(2, '0')}:{(timeUntilShuffle % 60).toString().padStart(2, '0')}
               </span>
             </div>
-            <button 
-              className="manual-shuffle-btn"
-              onClick={handleManualShuffle}
-              title="Shuffle all squares now"
-            >
-              🔄 Shuffle Now
-            </button>
+            {isAdmin && (
+              <button 
+                className="manual-shuffle-btn"
+                onClick={handleManualShuffle}
+                title="Shuffle all squares now (Admin only)"
+              >
+                🔄 Shuffle Now
+              </button>
+            )}
           </div>
           <div className="page-navigation">
             <Link 
