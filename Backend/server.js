@@ -125,7 +125,7 @@ app.use((req, res, next) => {
   
   // Always set these headers for actual requests
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, Accept, Origin, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-admin-token, X-Admin-Token, X-ADMIN-TOKEN, Accept, Origin, X-Requested-With');
   
   next();
 });
