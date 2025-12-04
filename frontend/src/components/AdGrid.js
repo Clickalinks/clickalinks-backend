@@ -143,7 +143,6 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
   // Auto-shuffle timer and manual shuffle handler
   useEffect(() => {
     const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
-    const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
     const SHUFFLE_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 
     const calculateTimeUntilShuffle = () => {
@@ -154,8 +153,12 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     };
 
     const triggerAutoShuffle = async () => {
-      if (!ADMIN_API_KEY) {
-        perfWarn('⚠️ ADMIN_API_KEY not configured. Auto-shuffle skipped.');
+      // Import adminAuth dynamically to avoid circular dependencies
+      const { getAdminHeaders } = await import('../utils/adminAuth');
+      const adminHeaders = getAdminHeaders();
+      
+      if (!adminHeaders['x-admin-token']) {
+        perfWarn('⚠️ Not authenticated. Auto-shuffle skipped.');
         return;
       }
 
@@ -165,7 +168,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': ADMIN_API_KEY
+            ...adminHeaders
           }
         });
 
@@ -200,311 +203,254 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     };
   }, []);
 
-  // Manual shuffle handler
-  const handleManualShuffle = useCallback(async () => {
-    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
-    const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
+  // Track mounted state with ref for useCallback
+  const isMountedRef = useRef(true);
 
-    if (!ADMIN_API_KEY) {
-      alert('⚠️ ADMIN_API_KEY not configured. Please set REACT_APP_ADMIN_API_KEY in your .env file.');
-      return;
-    }
-
-    if (!window.confirm('🔄 Shuffle all advertising squares now?\n\nThis will randomly rearrange all occupied squares.\n\nContinue?')) {
-      return;
-    }
-
+  // Load purchased squares function - moved to useCallback so it's accessible to all hooks
+  const loadPurchasedSquares = useCallback(async (forceFresh = false) => {
+    if (!isMountedRef.current) return; // Prevent state updates if unmounted
+    
     try {
-      perfLog('🔄 Manual shuffle triggered');
-      const response = await fetch(`${BACKEND_URL}/admin/shuffle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+      // MOBILE FIX: Force fresh data on mobile - skip cache to prevent stale data
+      if (isMobileDevice()) {
+        // MOBILE: Always clear cache and fetch fresh data
+        perfLog(`📱 Mobile device detected - forcing fresh data fetch`);
+        try {
+          const { clearAllCache } = await import('../utils/cache');
+          await clearAllCache();
+          perfLog(`✅ Mobile cache cleared`);
+        } catch (cacheError) {
+          perfWarn('⚠️ Mobile cache clear failed:', cacheError);
+        }
+      }
+      
+      // PERFORMANCE: Try cache first for instant load (desktop only)
+      // BUT: Skip cache if forceFresh=true (e.g., after purchase completed)
+      let cachedPurchases = {};
+      if (!isMobileDevice() && !forceFresh) {
+        perfLog(`🚀 Loading from cache for page ${pageNumber} (squares ${start}-${end})...`);
+        cachedPurchases = await getCachedPurchases(start, end);
+        
+        if (Object.keys(cachedPurchases).length > 0 && isMountedRef.current) {
+          perfLog(`✅ Loaded ${Object.keys(cachedPurchases).length} squares from cache`);
+          setPurchasedSquares(cachedPurchases);
+          setIsLoading(false);
+        }
+      } else {
+        if (forceFresh) {
+          perfLog(`🔄 Force fresh: Skipping cache, fetching fresh data from Firestore`);
+        } else {
+          perfLog(`📱 Mobile: Skipping cache, fetching fresh data from Firestore`);
+        }
+      }
+      
+      // PERFORMANCE: Sync localStorage to Firestore in background (non-blocking)
+      // Only sync once per session, don't wait for it
+      if (!sessionStorage.getItem('localStorageSynced')) {
+        sessionStorage.setItem('localStorageSynced', 'true');
+        // Run sync in background, don't await
+        syncLocalStorageToFirestore().then(syncedCount => {
+          if (syncedCount > 0) {
+            perfLog(`✅ Synced ${syncedCount} purchase(s) from localStorage to Firestore`);
+          }
+        }).catch(syncError => {
+          perfError('❌ Error syncing localStorage to Firestore:', syncError);
+        });
+      }
+      
+      // PERFORMANCE: Load all active purchases, filter client-side to avoid index requirement
+      // Note: Firestore doesn't support range queries on squareNumber easily without composite index
+      // We'll load all active and filter client-side, but use caching to minimize queries
+      perfLog(`🔄 Loading purchased squares from Firestore for page ${pageNumber} (squares ${start}-${end})...`);
+      
+      // Load purchases from Firestore
+      // NOTE: Collection name is 'purchasedSquares' in Firestore
+      
+      // PERFORMANCE: Use cache if available (desktop only), only query Firestore if cache is empty or mobile
+      let querySnapshot;
+      if (!isMobileDevice() && Object.keys(cachedPurchases).length > 0) {
+        // Use cache, skip Firestore query for faster loading (desktop only)
+        perfLog(`✅ Using cached data, skipping Firestore query for faster load`);
+        querySnapshot = { size: 0, forEach: () => {} }; // Empty snapshot
+      } else {
+        // MOBILE/TABLET: Fetch fresh data
+        const pageQuery = query(
+          collection(db, 'purchasedSquares'),
+          where('status', '==', 'active'),
+          where('paymentStatus', '==', 'paid')
+        );
+        querySnapshot = await getDocs(pageQuery);
+        perfLog(`📊 Found ${querySnapshot.size} documents from Firestore`);
+      }
+  
+      const purchases = {};
+      const now = new Date();
+      
+      // CRITICAL: Use squareNumber as key for display, and purchaseId to prevent logo duplicates
+      const squareToDocMap = new Map(); // Track squareNumber -> docId to detect duplicates
+      const purchaseIdSet = new Set(); // Track purchaseIds to ensure each logo appears only once
+      
+      // Process purchases and map by squareNumber
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const docId = doc.id;
+        const purchaseId = data.purchaseId || docId;
+        
+        // Filter: Only active, paid purchases with logos
+        if (!data || data.status !== 'active') return;
+        if (data.paymentStatus && data.paymentStatus !== 'paid') return;
+        
+        // Check expiration
+        if (data.endDate) {
+          const endDate = new Date(data.endDate);
+          if (endDate < now) return;
+        }
+        
+        // Must have valid logo
+        const logoData = data.logoData;
+        if (!logoData || typeof logoData !== 'string' || !logoData.trim()) return;
+        if (!logoData.startsWith('http://') && !logoData.startsWith('https://') && !logoData.startsWith('data:')) return;
+        
+        // Prevent duplicates
+        if (purchaseIdSet.has(purchaseId)) {
+          perfWarn(`⚠️ Duplicate purchaseId: ${purchaseId}, skipping`);
+          return;
+        }
+        purchaseIdSet.add(purchaseId);
+        
+        // Use squareNumber directly for mapping
+        const purchaseSquareNumber = data.squareNumber;
+        
+        // Only include purchases in current page range
+        if (purchaseSquareNumber >= start && purchaseSquareNumber <= end) {
+          purchases[purchaseSquareNumber] = {
+            ...data,
+            purchaseId: purchaseId,
+            docId: docId,
+            squareNumber: purchaseSquareNumber
+          };
         }
       });
+      
+      perfLog(`✅ Loaded ${querySnapshot.size} total purchases, showing ${Object.keys(purchases).length} on page ${pageNumber} (squares ${start}-${end})`);
 
-      if (response.ok) {
-        const result = await response.json();
-        perfLog(`✅ Manual shuffle completed: ${result.shuffledCount || 0} squares shuffled`);
-        alert(`✅ Shuffle completed! ${result.shuffledCount || 0} squares shuffled.`);
-        window.dispatchEvent(new CustomEvent('shuffleCompleted'));
-        loadPurchasedSquares(true);
+      // CRITICAL FIX: Only use Firestore data - don't merge localStorage if Firestore is empty
+      // If Firestore is empty, clear localStorage to prevent stale data from showing
+      if (querySnapshot.size === 0) {
+        // Firestore is empty - clear localStorage to prevent stale "Active Ad" squares
+        const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+        if (Object.keys(localPurchases).length > 0) {
+          perfLog(`🗑️ Firestore is empty - clearing ${Object.keys(localPurchases).length} stale entries from localStorage`);
+          localStorage.removeItem('squarePurchases');
+          // Also clear logo paths
+          Object.keys(localPurchases).forEach(squareNum => {
+            localStorage.removeItem(`logoPath_${squareNum}`);
+          });
+        }
       } else {
-        const errorText = await response.text();
-        throw new Error(`Shuffle failed: ${response.status} ${response.statusText}`);
-      }
-    } catch (error) {
-      perfError('❌ Manual shuffle error:', error);
-      alert(`❌ Shuffle failed: ${error.message}`);
-    }
-  }, []);
-
-  // Listen for shuffle completion events
-  useEffect(() => {
-    const handleShuffleCompleted = () => {
-      perfLog('🔄 Shuffle completed event received, reloading purchases...');
-      loadPurchasedSquares(true);
-    };
-
-    window.addEventListener('shuffleCompleted', handleShuffleCompleted);
-    return () => {
-      window.removeEventListener('shuffleCompleted', handleShuffleCompleted);
-    };
-  }, []);
-
-        // Load purchased squares with caching
-        useEffect(() => {
-          let isSyncing = false;
-          let isMounted = true;
-          
-          const loadPurchasedSquares = async (forceFresh = false) => {
-            if (!isMounted) return; // Prevent state updates if unmounted
-            
-            try {
-              // MOBILE FIX: Force fresh data on mobile - skip cache to prevent stale data
-              if (isMobileDevice()) {
-                // MOBILE: Always clear cache and fetch fresh data
-                perfLog(`📱 Mobile device detected - forcing fresh data fetch`);
-                try {
-                  const { clearAllCache } = await import('../utils/cache');
-                  await clearAllCache();
-                  perfLog(`✅ Mobile cache cleared`);
-                } catch (cacheError) {
-                  perfWarn('⚠️ Mobile cache clear failed:', cacheError);
-                }
-              }
-              
-              // PERFORMANCE: Try cache first for instant load (desktop only)
-              // BUT: Skip cache if forceFresh=true (e.g., after purchase completed)
-              let cachedPurchases = {};
-              if (!isMobileDevice() && !forceFresh) {
-                perfLog(`🚀 Loading from cache for page ${pageNumber} (squares ${start}-${end})...`);
-                cachedPurchases = await getCachedPurchases(start, end);
-                
-                if (Object.keys(cachedPurchases).length > 0 && isMounted) {
-                  perfLog(`✅ Loaded ${Object.keys(cachedPurchases).length} squares from cache`);
-                  setPurchasedSquares(cachedPurchases);
-                  setIsLoading(false);
-                }
-              } else {
-                if (forceFresh) {
-                  perfLog(`🔄 Force fresh: Skipping cache, fetching fresh data from Firestore`);
-                } else {
-                  perfLog(`📱 Mobile: Skipping cache, fetching fresh data from Firestore`);
-                }
-              }
-              
-              // PERFORMANCE: Sync localStorage to Firestore in background (non-blocking)
-              // Only sync once per session, don't wait for it
-              if (!isSyncing && !sessionStorage.getItem('localStorageSynced')) {
-                isSyncing = true;
-                sessionStorage.setItem('localStorageSynced', 'true');
-                // Run sync in background, don't await
-                syncLocalStorageToFirestore().then(syncedCount => {
-                  if (syncedCount > 0) {
-                    perfLog(`✅ Synced ${syncedCount} purchase(s) from localStorage to Firestore`);
-                  }
-                  isSyncing = false;
-                }).catch(syncError => {
-                  perfError('❌ Error syncing localStorage to Firestore:', syncError);
-                  isSyncing = false;
-                });
-              }
-              
-              // PERFORMANCE: Load all active purchases, filter client-side to avoid index requirement
-              // Note: Firestore doesn't support range queries on squareNumber easily without composite index
-              // We'll load all active and filter client-side, but use caching to minimize queries
-              perfLog(`🔄 Loading purchased squares from Firestore for page ${pageNumber} (squares ${start}-${end})...`);
-              
-              // Load purchases from Firestore
-              // NOTE: Collection name is 'purchasedSquares' in Firestore
-              
-              // PERFORMANCE: Use cache if available (desktop only), only query Firestore if cache is empty or mobile
-              let querySnapshot;
-              if (!isMobileDevice() && Object.keys(cachedPurchases).length > 0) {
-                // Use cache, skip Firestore query for faster loading (desktop only)
-                perfLog(`✅ Using cached data, skipping Firestore query for faster load`);
-                querySnapshot = { size: 0, forEach: () => {} }; // Empty snapshot
-              } else {
-                // MOBILE/TABLET: Fetch fresh data
-                const pageQuery = query(
-                  collection(db, 'purchasedSquares'),
-                  where('status', '==', 'active'),
-                  where('paymentStatus', '==', 'paid')
-                );
-                querySnapshot = await getDocs(pageQuery);
-                perfLog(`📊 Found ${querySnapshot.size} documents from Firestore`);
-              }
+        // Firestore has data - clean up localStorage entries that don't exist in Firestore
+        // Also clean up broken logo URLs (404 errors)
+        const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+        const firestoreSquareNumbers = new Set(Object.keys(purchases).map(sq => String(sq)));
+        let cleanedCount = 0;
         
-        const purchases = {};
-        const now = new Date();
-        
-        // CRITICAL: Use squareNumber as key for display, and purchaseId to prevent logo duplicates
-        const squareToDocMap = new Map(); // Track squareNumber -> docId to detect duplicates
-        const purchaseIdSet = new Set(); // Track purchaseIds to ensure each logo appears only once
-        
-        // Process purchases and map by squareNumber
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
-          const docId = doc.id;
-          const purchaseId = data.purchaseId || docId;
+        Object.keys(localPurchases).forEach(squareNum => {
+          const localData = localPurchases[squareNum];
           
-          // Filter: Only active, paid purchases with logos
-          if (!data || data.status !== 'active') return;
-          if (data.paymentStatus && data.paymentStatus !== 'paid') return;
-          
-          // Check expiration
-          if (data.endDate) {
-            const endDate = new Date(data.endDate);
-            if (endDate < now) return;
-          }
-          
-          // Must have valid logo
-          const logoData = data.logoData;
-          if (!logoData || typeof logoData !== 'string' || !logoData.trim()) return;
-          if (!logoData.startsWith('http://') && !logoData.startsWith('https://') && !logoData.startsWith('data:')) return;
-          
-          // Prevent duplicates
-          if (purchaseIdSet.has(purchaseId)) {
-            perfWarn(`⚠️ Duplicate purchaseId: ${purchaseId}, skipping`);
+          // Remove if not in Firestore (Firestore is source of truth)
+          if (!firestoreSquareNumbers.has(squareNum)) {
+            delete localPurchases[squareNum];
+            localStorage.removeItem(`logoPath_${squareNum}`);
+            cleanedCount++;
+            perfLog(`🗑️ Removed stale localStorage entry for square ${squareNum} (not in Firestore)`);
             return;
           }
-          purchaseIdSet.add(purchaseId);
           
-          // Use squareNumber directly for mapping
-          const purchaseSquareNumber = data.squareNumber;
+          // Check for broken logo URLs (404)
+          const logoData = localData.logoData;
+          if (logoData && logoData.includes('firebasestorage.googleapis.com')) {
+            // Mark for validation - will be checked async
+            // For now, if Firestore has the square, use Firestore data (which is already in purchases)
+            // Don't merge localStorage if Firestore has it
+          }
           
-          // Only include purchases in current page range
-          if (purchaseSquareNumber >= start && purchaseSquareNumber <= end) {
-            purchases[purchaseSquareNumber] = {
-              ...data,
-              purchaseId: purchaseId,
-              docId: docId,
-              squareNumber: purchaseSquareNumber
-            };
+          // Clean up unconfirmed/pending purchases
+          const isActive = localData && localData.status === 'active';
+          const hasConfirmedPayment = localData.paymentStatus === 'paid';
+          
+          if (!isActive || !hasConfirmedPayment) {
+            delete localPurchases[squareNum];
+            localStorage.removeItem(`logoPath_${squareNum}`);
+            cleanedCount++;
+            perfLog(`🗑️ Removed unconfirmed purchase from localStorage: square ${squareNum} (status: ${localData.status}, payment: ${localData.paymentStatus})`);
           }
         });
         
-        perfLog(`✅ Loaded ${querySnapshot.size} total purchases, showing ${Object.keys(purchases).length} on page ${pageNumber} (squares ${start}-${end})`);
+        // Save cleaned localStorage
+        if (cleanedCount > 0) {
+          localStorage.setItem('squarePurchases', JSON.stringify(localPurchases));
+          perfLog(`✅ Cleaned ${cleanedCount} stale/broken entries from localStorage`);
+        }
+      }
 
-        // CRITICAL FIX: Only use Firestore data - don't merge localStorage if Firestore is empty
-        // If Firestore is empty, clear localStorage to prevent stale data from showing
-        if (querySnapshot.size === 0) {
-          // Firestore is empty - clear localStorage to prevent stale "Active Ad" squares
-          const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
-          if (Object.keys(localPurchases).length > 0) {
-            perfLog(`🗑️ Firestore is empty - clearing ${Object.keys(localPurchases).length} stale entries from localStorage`);
-            localStorage.removeItem('squarePurchases');
-            // Also clear logo paths
-            Object.keys(localPurchases).forEach(squareNum => {
-              localStorage.removeItem(`logoPath_${squareNum}`);
-            });
-          }
-        } else {
-          // Firestore has data - clean up localStorage entries that don't exist in Firestore
-          // Also clean up broken logo URLs (404 errors)
-          const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
-          const firestoreSquareNumbers = new Set(Object.keys(purchases).map(sq => String(sq)));
-          let cleanedCount = 0;
-          
-          Object.keys(localPurchases).forEach(squareNum => {
-            const localData = localPurchases[squareNum];
-            
-            // Remove if not in Firestore (Firestore is source of truth)
-            if (!firestoreSquareNumbers.has(squareNum)) {
-              delete localPurchases[squareNum];
-              localStorage.removeItem(`logoPath_${squareNum}`);
-              cleanedCount++;
-              perfLog(`🗑️ Removed stale localStorage entry for square ${squareNum} (not in Firestore)`);
-              return;
-            }
-            
-            // Check for broken logo URLs (404)
-            const logoData = localData.logoData;
-            if (logoData && logoData.includes('firebasestorage.googleapis.com')) {
-              // Mark for validation - will be checked async
-              // For now, if Firestore has the square, use Firestore data (which is already in purchases)
-              // Don't merge localStorage if Firestore has it
-            }
-            
-            // Clean up unconfirmed/pending purchases
-            const isActive = localData && localData.status === 'active';
-            const hasConfirmedPayment = localData.paymentStatus === 'paid';
-            
-            if (!isActive || !hasConfirmedPayment) {
-              delete localPurchases[squareNum];
-              localStorage.removeItem(`logoPath_${squareNum}`);
-              cleanedCount++;
-              perfLog(`🗑️ Removed unconfirmed purchase from localStorage: square ${squareNum} (status: ${localData.status}, payment: ${localData.paymentStatus})`);
-            }
-          });
-          
-          // Save cleaned localStorage
-          if (cleanedCount > 0) {
-            localStorage.setItem('squarePurchases', JSON.stringify(localPurchases));
-            perfLog(`✅ Cleaned ${cleanedCount} stale/broken entries from localStorage`);
-          }
-        }
-
-        perfLog(`✅ Loaded ${Object.keys(purchases).length} active squares from Firestore`);
-        
-        // Debug: Log squares with logos
-        const squaresWithLogos = Object.keys(purchases).filter(sq => purchases[sq].logoData);
-        perfLog(`📊 Squares with logos: ${squaresWithLogos.length} out of ${Object.keys(purchases).length}`);
-        if (squaresWithLogos.length > 0) {
-          perfLog(`📋 Squares with logos: ${squaresWithLogos.slice(0, 10).join(', ')}${squaresWithLogos.length > 10 ? '...' : ''}`);
-        }
-        
-        // PERFORMANCE: Cache the purchases for faster subsequent loads (non-blocking, desktop/tablet only)
-        // MOBILE FIX: Don't cache on mobile phones to prevent stale data
-        // TABLET FIX: Tablets use desktop caching behavior
-        if (!isMobileDevice()) {
-          cachePurchases(purchases).catch(err => {
-            perfWarn('Cache write failed:', err);
-          });
-        } else {
-          perfLog(`📱 Mobile phone: Skipping cache write to prevent stale data`);
-        }
-        
-        // Debug: Log if no squares loaded
-        if (Object.keys(purchases).length === 0) {
-          perfWarn('⚠️ NO SQUARES LOADED! Check Firestore configuration.');
-        }
-        
-        // CRITICAL: Update purchases, then check for cached images
-        // Don't reset loadedImages - let browser cache work
-        if (isMounted) {
+      perfLog(`✅ Loaded ${Object.keys(purchases).length} active squares from Firestore`);
+      
+      // Debug: Log squares with logos
+      const squaresWithLogos = Object.keys(purchases).filter(sq => purchases[sq].logoData);
+      perfLog(`📊 Squares with logos: ${squaresWithLogos.length} out of ${Object.keys(purchases).length}`);
+      if (squaresWithLogos.length > 0) {
+        perfLog(`📋 Squares with logos: ${squaresWithLogos.slice(0, 10).join(', ')}${squaresWithLogos.length > 10 ? '...' : ''}`);
+      }
+      
+      // PERFORMANCE: Cache the purchases for faster subsequent loads (non-blocking, desktop/tablet only)
+      // MOBILE FIX: Don't cache on mobile phones to prevent stale data
+      // TABLET FIX: Tablets use desktop caching behavior
+      if (!isMobileDevice()) {
+        cachePurchases(purchases).catch(err => {
+          perfWarn('Cache write failed:', err);
+        });
+      } else {
+        perfLog(`📱 Mobile phone: Skipping cache write to prevent stale data`);
+      }
+      
+      // Debug: Log if no squares loaded
+      if (Object.keys(purchases).length === 0) {
+        perfWarn('⚠️ NO SQUARES LOADED! Check Firestore configuration.');
+      }
+      
+      // CRITICAL: Update purchases, then check for cached images
+      // Don't reset loadedImages - let browser cache work
+      if (isMountedRef.current) {
         setPurchasedSquares(purchases);
-          
-          // After state update, check for images that loaded from cache
-          setTimeout(() => {
-            imageRefsRef.current.forEach((imgEl, pos) => {
-              if (imgEl && imgEl.complete && imgEl.naturalWidth > 0 && purchases[pos]) {
-                setLoadedImages(prev => {
-                  if (!prev.has(pos)) {
-                    perfLog(`✅ Square ${pos}: Image loaded from cache`);
-                    return new Set([...prev, pos]);
-                  }
-                  return prev;
-                });
-                imgEl.style.opacity = '1';
-                imgEl.style.display = 'block';
-              }
-            });
-          }, 50);
-        }
         
-        // Note: Removed fetch HEAD check to avoid CORS errors
-        // Image loading errors will be handled by the img onError handler
-      } catch (error) {
-        perfError('❌ Error loading squares:', error);
-        
-        // Don't crash the component - ensure loading state is cleared
-        if (!isMounted) return;
-        
-        // Fallback to localStorage with expiration check
-        try {
+        // After state update, check for images that loaded from cache
+        setTimeout(() => {
+          imageRefsRef.current.forEach((imgEl, pos) => {
+            if (imgEl && imgEl.complete && imgEl.naturalWidth > 0 && purchases[pos]) {
+              setLoadedImages(prev => {
+                if (!prev.has(pos)) {
+                  perfLog(`✅ Square ${pos}: Image loaded from cache`);
+                  return new Set([...prev, pos]);
+                }
+                return prev;
+              });
+              imgEl.style.opacity = '1';
+              imgEl.style.display = 'block';
+            }
+          });
+        }, 50);
+      }
+      
+      // Note: Removed fetch HEAD check to avoid CORS errors
+      // Image loading errors will be handled by the img onError handler
+    } catch (error) {
+      perfError('❌ Error loading squares:', error);
+      
+      // Don't crash the component - ensure loading state is cleared
+      if (!isMountedRef.current) return;
+      
+      // Fallback to localStorage with expiration check
+      try {
         const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
         const now = new Date();
         const activePurchases = {};
@@ -523,25 +469,82 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
           }
         });
         
-          if (isMounted) {
-        setPurchasedSquares(activePurchases);
-          }
-        } catch (localStorageError) {
-          perfError('❌ Error reading localStorage:', localStorageError);
-          // Set empty state to prevent crash
-          if (isMounted) {
-            setPurchasedSquares({});
-          }
+        if (isMountedRef.current) {
+          setPurchasedSquares(activePurchases);
         }
-      } finally {
-        if (isMounted) {
-        setIsLoading(false);
+      } catch (localStorageError) {
+        perfError('❌ Error reading localStorage:', localStorageError);
+        // Set empty state to prevent crash
+        if (isMountedRef.current) {
+          setPurchasedSquares({});
         }
       }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [start, end, pageNumber]);
+
+  // Manual shuffle handler
+  const handleManualShuffle = useCallback(async () => {
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
+    
+    // Import adminAuth dynamically
+    const { getAdminHeaders } = await import('../utils/adminAuth');
+    const adminHeaders = getAdminHeaders();
+
+    if (!adminHeaders['x-admin-token']) {
+      alert('⚠️ Not authenticated. Please log in to the admin dashboard to shuffle.');
+      return;
+    }
+
+    if (!window.confirm('🔄 Shuffle all advertising squares now?\n\nThis will randomly rearrange all occupied squares.\n\nContinue?')) {
+      return;
+    }
+
+    try {
+      perfLog('🔄 Manual shuffle triggered');
+      const response = await fetch(`${BACKEND_URL}/admin/shuffle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...adminHeaders
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        perfLog(`✅ Manual shuffle completed: ${result.shuffledCount || 0} squares shuffled`);
+        alert(`✅ Shuffle completed! ${result.shuffledCount || 0} squares shuffled.`);
+        window.dispatchEvent(new CustomEvent('shuffleCompleted'));
+        loadPurchasedSquares(true);
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Shuffle failed: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      perfError('❌ Manual shuffle error:', error);
+      alert(`❌ Shuffle failed: ${error.message}`);
+    }
+  }, [loadPurchasedSquares]);
+
+  // Listen for shuffle completion events
+  useEffect(() => {
+    const handleShuffleCompleted = () => {
+      perfLog('🔄 Shuffle completed event received, reloading purchases...');
+      loadPurchasedSquares(true);
     };
 
-    // Initial load
-    loadPurchasedSquares();
+    window.addEventListener('shuffleCompleted', handleShuffleCompleted);
+    return () => {
+      window.removeEventListener('shuffleCompleted', handleShuffleCompleted);
+    };
+  }, [loadPurchasedSquares]);
+
+  // Load purchased squares with caching - main useEffect
+  useEffect(() => {
+    isMountedRef.current = true;
 
     // Set up real-time Firestore listener for automatic updates
     // PERFORMANCE: Still listen to all active purchases but filter client-side
@@ -559,7 +562,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
       );
       unsubscribe = onSnapshot(q, 
         (snapshot) => {
-        if (!isMounted) return; // Don't update if component unmounted
+        if (!isMountedRef.current) return; // Don't update if component unmounted
         
         perfLog('🔄 Firestore real-time update received');
         const purchases = {};
@@ -693,12 +696,12 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         
         // CRITICAL: Update purchases, then check for cached images
         // Don't reset loadedImages - let browser cache work
-        if (isMounted) {
+        if (isMountedRef.current) {
         setPurchasedSquares(purchases);
           
           // After state update, check for images that loaded from cache
           setTimeout(() => {
-            if (!isMounted) return; // Check again before DOM manipulation
+            if (!isMountedRef.current) return; // Check again before DOM manipulation
             imageRefsRef.current.forEach((imgEl, pos) => {
               if (imgEl && imgEl.complete && imgEl.naturalWidth > 0 && purchases[pos]) {
                 setLoadedImages(prev => {
@@ -721,7 +724,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         (error) => {
           perfError('❌ Firestore listener error:', error);
           // Fallback to manual reload on error (only if mounted)
-          if (isMounted) {
+          if (isMountedRef.current) {
           loadPurchasedSquares();
           }
         }
@@ -769,8 +772,11 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
       await clearExpiredCache();
     }, 10 * 60 * 1000); // Every 10 minutes
 
+    // Initial load
+    loadPurchasedSquares();
+
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       unsubscribe(); // Unsubscribe from Firestore listener
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('purchaseCompleted', handlePurchaseCompleted);
@@ -781,7 +787,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         imageObserverRef.current.disconnect();
       }
     };
-  }, [start, end, pageNumber]);
+  }, [start, end, pageNumber, loadPurchasedSquares]);
 
   const isAvailable = useCallback((position) => {
     return !purchasedSquares[position];

@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getAdminHeaders } from '../utils/adminAuth';
 import './ShuffleManager.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:10000';
-const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
 
 const ShuffleManager = () => {
   const [stats, setStats] = useState({
@@ -28,15 +28,16 @@ const ShuffleManager = () => {
     try {
       setError('');
       
-      if (!ADMIN_API_KEY) {
-        setError('ADMIN_API_KEY not configured in environment variables');
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
         return;
       }
 
       const response = await fetch(`${BACKEND_URL}/admin/shuffle/stats`, {
         method: 'GET',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         }
       });
@@ -69,14 +70,15 @@ const ShuffleManager = () => {
     setSuccess('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        throw new Error('ADMIN_API_KEY not configured');
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        throw new Error('Not authenticated. Please log in to the admin dashboard.');
       }
 
       const response = await fetch(`${BACKEND_URL}/admin/shuffle`, {
         method: 'POST',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         }
       });

@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getAdminHeaders } from '../utils/adminAuth';
 import './CouponManager.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:10000';
-const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
 
 const CouponManager = () => {
   const [promoCodes, setPromoCodes] = useState([]);
@@ -47,15 +47,16 @@ const CouponManager = () => {
     setError('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        setError('ADMIN_API_KEY not configured');
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
         return;
       }
 
       const response = await fetch(`${BACKEND_URL}/api/promo-code/list`, {
         method: 'GET',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         }
       });
@@ -87,10 +88,16 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
+        return;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/promo-code/create`, {
         method: 'POST',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -131,10 +138,16 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
+        return;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/promo-code/bulk-create`, {
         method: 'POST',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -180,10 +193,16 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
+        return;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/promo-code/${promoId}`, {
         method: 'DELETE',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         }
       });
@@ -219,10 +238,16 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
+      const adminHeaders = getAdminHeaders();
+      if (!adminHeaders['x-admin-token']) {
+        setError('Not authenticated. Please log in to the admin dashboard.');
+        return;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/promo-code/bulk-delete`, {
         method: 'POST',
         headers: {
-          'x-api-key': ADMIN_API_KEY,
+          ...adminHeaders,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

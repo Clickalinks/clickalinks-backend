@@ -13,55 +13,57 @@ import {
   deletePromoCode,
   bulkDeletePromoCodes
 } from '../services/promoCodeService.js';
+import { promoCodeRateLimit } from '../middleware/security.js';
+import { body, validationResult } from 'express-validator';
+import { verifyAdminToken } from './admin.js';
 
 const router = express.Router();
 
-// Middleware to check admin API key for admin endpoints
-const checkAdminAuth = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'] || req.headers['X-API-Key'] || req.headers['X-API-KEY'];
-  const adminApiKey = process.env.ADMIN_API_KEY;
-  
-  if (!adminApiKey) {
-    return res.status(500).json({
-      success: false,
-      error: 'Admin authentication not configured'
-    });
-  }
-  
-  if (apiKey !== adminApiKey) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized: Invalid API key'
-    });
-  }
-  
-  next();
-};
-
 // Validate promo code (public endpoint)
-router.post('/validate', async (req, res) => {
-  try {
-    const { code, originalAmount } = req.body;
-    
-    if (!code) {
-      return res.status(400).json({
+// SECURITY: Apply rate limiting and input validation
+router.post('/validate', 
+  promoCodeRateLimit,
+  [
+    body('code')
+      .trim()
+      .isLength({ min: 1, max: 50 })
+      .matches(/^[A-Z0-9-_]+$/)
+      .withMessage('Promo code must be 1-50 characters and contain only letters, numbers, hyphens, and underscores'),
+    body('originalAmount')
+      .optional()
+      .isFloat({ min: 0 })
+      .withMessage('Original amount must be a positive number')
+  ],
+  async (req, res) => {
+    try {
+      // Check validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          valid: false,
+          error: errors.array()[0].msg
+        });
+      }
+      
+      const { code, originalAmount } = req.body;
+      
+      // Sanitize input
+      const sanitizedCode = code.trim().toUpperCase();
+      const sanitizedAmount = Math.max(0, parseFloat(originalAmount) || 0);
+      
+      const result = await validatePromoCode(sanitizedCode, sanitizedAmount);
+      res.json(result);
+    } catch (error) {
+      console.error('❌ Error validating promo code:', error);
+      res.status(500).json({
         success: false,
         valid: false,
-        error: 'Promo code is required'
+        error: 'Error validating promo code'
       });
     }
-    
-    const result = await validatePromoCode(code, originalAmount || 0);
-    res.json(result);
-  } catch (error) {
-    console.error('❌ Error validating promo code:', error);
-    res.status(500).json({
-      success: false,
-      valid: false,
-      error: 'Error validating promo code'
-    });
   }
-});
+);
 
 // Apply promo code (increment usage)
 router.post('/apply', async (req, res) => {
@@ -87,7 +89,7 @@ router.post('/apply', async (req, res) => {
 });
 
 // Create single promo code (admin only)
-router.post('/create', checkAdminAuth, async (req, res) => {
+router.post('/create', verifyAdminToken, async (req, res) => {
   try {
     const result = await createPromoCode(req.body);
     
@@ -106,7 +108,7 @@ router.post('/create', checkAdminAuth, async (req, res) => {
 });
 
 // Bulk create promo codes (admin only)
-router.post('/bulk-create', checkAdminAuth, async (req, res) => {
+router.post('/bulk-create', verifyAdminToken, async (req, res) => {
   try {
     const result = await bulkCreatePromoCodes(req.body);
     res.json(result);
@@ -120,7 +122,7 @@ router.post('/bulk-create', checkAdminAuth, async (req, res) => {
 });
 
 // List all promo codes (admin only)
-router.get('/list', checkAdminAuth, async (req, res) => {
+router.get('/list', verifyAdminToken, async (req, res) => {
   try {
     const result = await getAllPromoCodes();
     res.json(result);
@@ -136,7 +138,7 @@ router.get('/list', checkAdminAuth, async (req, res) => {
 });
 
 // Delete single promo code (admin only)
-router.delete('/:id', checkAdminAuth, async (req, res) => {
+router.delete('/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await deletePromoCode(id);
@@ -156,7 +158,7 @@ router.delete('/:id', checkAdminAuth, async (req, res) => {
 });
 
 // Bulk delete promo codes (admin only)
-router.post('/bulk-delete', checkAdminAuth, async (req, res) => {
+router.post('/bulk-delete', verifyAdminToken, async (req, res) => {
   try {
     const { promoIds } = req.body;
     

@@ -6,24 +6,47 @@
 import React, { useState, useEffect } from 'react';
 import ShuffleManager from './ShuffleManager';
 import CouponManager from './CouponManager';
+import { adminLogin, checkAdminAuth, logout } from '../utils/adminAuth';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [password, setPassword] = useState('');
-  
-  const ADMIN_PASSWORD = process.env.REACT_APP_ADMIN_PASSWORD || '';
+  const [loginError, setLoginError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  // Check if already authenticated on mount
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const authenticated = await checkAdminAuth();
+      setIsAuthenticated(authenticated);
+    };
+    verifyAuth();
+  }, []);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
+    setIsLoading(true);
+    setLoginError('');
+
+    const result = await adminLogin(password);
+    
+    if (result.success) {
       setIsAuthenticated(true);
       setPassword('');
     } else {
-      alert('❌ Invalid admin password');
-      setPassword('');
+      setLoginError(result.error || 'Invalid password');
     }
+    
+    setIsLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsAuthenticated(false);
+    setPassword('');
+    setLoginError('');
   };
 
   if (!isAuthenticated) {
@@ -36,22 +59,24 @@ const AdminDashboard = () => {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setLoginError(''); // Clear error on input
+              }}
               placeholder="Enter admin password..."
               autoComplete="current-password"
               required
+              disabled={isLoading}
             />
-            <button type="submit" className="btn-primary">
-              Unlock Dashboard
+            {loginError && (
+              <div className="login-error" style={{ color: 'red', marginTop: '10px' }}>
+                ❌ {loginError}
+              </div>
+            )}
+            <button type="submit" className="btn-primary" disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Unlock Dashboard'}
             </button>
           </form>
-          
-          {!ADMIN_PASSWORD && (
-            <div className="login-warning">
-              ⚠️ <strong>Security Warning:</strong> ADMIN_PASSWORD not configured. 
-              Please set REACT_APP_ADMIN_PASSWORD in your .env file.
-            </div>
-          )}
 
           <div className="login-hint">
             <p>💡 <strong>Secret Access:</strong> Press <code>Ctrl+Shift+A</code> on any page to reveal admin link</p>
@@ -102,7 +127,7 @@ const AdminDashboard = () => {
           <div className="admin-user">Welcome, Admin</div>
         </div>
         <button 
-          onClick={() => setIsAuthenticated(false)}
+          onClick={handleLogout}
           className="logout-btn"
         >
           🔓 Logout

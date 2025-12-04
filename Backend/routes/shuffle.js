@@ -5,33 +5,12 @@
 
 import express from 'express';
 import { performGlobalShuffle, getShuffleStats } from '../services/shuffleService.js';
+import { verifyAdminToken } from './admin.js';
 
 const router = express.Router();
 
-// Middleware to check admin API key
-const checkAdminAuth = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'] || req.headers['X-API-Key'] || req.headers['X-API-KEY'];
-  const adminApiKey = process.env.ADMIN_API_KEY;
-  
-  if (!adminApiKey) {
-    return res.status(500).json({
-      success: false,
-      error: 'Admin authentication not configured'
-    });
-  }
-  
-  if (apiKey !== adminApiKey) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized: Invalid API key'
-    });
-  }
-  
-  next();
-};
-
 // Get shuffle statistics
-router.get('/admin/shuffle/stats', checkAdminAuth, async (req, res) => {
+router.get('/admin/shuffle/stats', verifyAdminToken, async (req, res) => {
   try {
     const stats = await getShuffleStats();
     res.json(stats);
@@ -49,7 +28,7 @@ router.get('/admin/shuffle/stats', checkAdminAuth, async (req, res) => {
 });
 
 // Trigger shuffle
-router.post('/admin/shuffle', checkAdminAuth, async (req, res) => {
+router.post('/admin/shuffle', verifyAdminToken, async (req, res) => {
   try {
     console.log('🔄 Shuffle request received');
     const result = await performGlobalShuffle();

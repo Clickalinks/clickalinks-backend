@@ -6,6 +6,18 @@ import FormData from 'form-data';
 import { sendAdConfirmationEmail } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
+import adminRoutes from './routes/admin.js';
+import {
+  securityHeaders,
+  generalRateLimit,
+  promoCodeRateLimit,
+  paymentRateLimit,
+  adminRateLimit,
+  requestTimeout,
+  sanitizeError,
+  sanitizeLogData
+} from './middleware/security.js';
+import { validateCheckoutSession, checkValidation } from './middleware/inputValidation.js';
 
 // Load environment variables
 dotenv.config();
@@ -16,11 +28,26 @@ console.log('🔑 ADMIN_API_KEY check:', process.env.ADMIN_API_KEY ? `SET (${pro
 
 const app = express();
 
-// 🔍 DEBUG: Check what key is being loaded
-console.log('🔑 Environment check:');
-console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
-console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
-console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
+// SECURITY: Apply security headers first
+app.use(securityHeaders);
+console.log('✅ Security headers configured (helmet)');
+
+// SECURITY: Apply request timeout
+app.use(requestTimeout);
+console.log('✅ Request timeout configured (30 seconds)');
+
+// SECURITY: Apply general rate limiting to all routes
+app.use(generalRateLimit);
+console.log('✅ General rate limiting configured (100 req/15min)');
+
+// 🔍 DEBUG: Check what key is being loaded (sanitized)
+const isDevelopment = process.env.NODE_ENV !== 'production';
+if (isDevelopment) {
+  console.log('🔑 Environment check:');
+  console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
+  console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
+}
 
 // Initialize Stripe - handle missing key gracefully
 let stripe;
@@ -105,10 +132,11 @@ app.use((req, res, next) => {
 
 console.log('✅ CORS configured: Manual handling (no cors() middleware)');
 
-// Increase body size limit for logo uploads (10MB)
-// CRITICAL: Must be before routes to parse DELETE request bodies
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// SECURITY: Reduced body size limit for most endpoints (1MB)
+// Only file upload endpoints will use larger limit
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+console.log('✅ Body size limit configured (1MB default)');
 
 // Shuffle admin routes
 app.use('/', shuffleRoutes);
@@ -117,6 +145,10 @@ console.log('✅ Shuffle routes registered');
 // Promo code routes
 app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
+
+// Admin authentication routes
+app.use('/api/admin', adminRoutes);
+console.log('✅ Admin authentication routes registered at /api/admin');
 
 // Log all registered routes for debugging
 app.use((req, res, next) => {
@@ -129,18 +161,18 @@ app.get('/api/test-cors', (req, res) => {
   res.json({
     success: true,
     message: 'CORS test endpoint',
-      headers: {
-        origin: req.headers.origin,
-        'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
-      }
-    });
+    headers: {
+      origin: req.headers.origin,
+      'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
+    }
   });
+});
 
 // Root route
 app.get('/', (req, res) => {
   res.json({ 
     status: 'OK',
-    message: 'ClickaLinks Backend Server is running! 🚀',
+    message: 'ClickALinks Backend Server is running! 🚀',
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/health',
@@ -162,60 +194,70 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-// Test CORS endpoint
-app.get('/api/test-cors', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS is working! ✅',
-    origin: req.headers.origin,
-    timestamp: new Date().toISOString()
-  });
-});
 
-// Test Stripe key endpoint
-app.get('/api/test-stripe', async (req, res) => {
-  try {
-    console.log('🔑 Testing Stripe key...');
-    
-    // Try to make a simple Stripe API call
-    const balance = await stripe.balance.retrieve();
-    
-    res.json({
-      success: true,
-      message: 'Stripe key is VALID! 🎉',
-      keyInfo: {
-        exists: !!process.env.STRIPE_SECRET_KEY,
-        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
-        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
-      },
-      balance: {
-        available: balance.available[0]?.amount || 0,
-        currency: balance.available[0]?.currency || 'gbp'
-      },
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Stripe key test failed:', error.message);
-    
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      keyInfo: {
-        exists: !!process.env.STRIPE_SECRET_KEY,
-        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
-        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
-      },
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+// SECURITY: Debug endpoints only available in development
+// Test Stripe key endpoint (DEVELOPMENT ONLY)
+if (isDevelopment) {
+  app.get('/api/test-stripe', async (req, res) => {
+    try {
+      console.log('🔑 Testing Stripe key...');
+      
+      if (!stripe) {
+        return res.status(500).json({
+          success: false,
+          error: 'Stripe not configured'
+        });
+      }
+      
+      // Try to make a simple Stripe API call
+      const balance = await stripe.balance.retrieve();
+      
+      res.json({
+        success: true,
+        message: 'Stripe key is VALID! 🎉',
+        keyInfo: {
+          exists: !!process.env.STRIPE_SECRET_KEY,
+          startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
+          length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
+        },
+        balance: {
+          available: balance.available[0]?.amount || 0,
+          currency: balance.available[0]?.currency || 'gbp'
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Stripe key test failed:', error.message);
+      
+      res.status(500).json({
+        success: false,
+        error: sanitizeError(error, isDevelopment),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  console.log('⚠️ Debug endpoint /api/test-stripe enabled (DEVELOPMENT ONLY)');
+} else {
+  // In production, return 404 for debug endpoints
+  app.get('/api/test-stripe', (req, res) => {
+    res.status(404).json({ success: false, error: 'Not found' });
+  });
+}
 
 // Create Stripe checkout session
-app.post('/api/create-checkout-session', async (req, res) => {
+// SECURITY: Apply payment-specific rate limiting and input validation
+app.post('/api/create-checkout-session', 
+  paymentRateLimit,
+  validateCheckoutSession,
+  checkValidation,
+  async (req, res) => {
   try {
-    console.log('💰 Payment request received from:', req.headers.origin);
-    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    const origin = req.headers.origin || 'unknown';
+    console.log('💰 Payment request received from:', origin);
+    // SECURITY: Sanitize log data
+    const sanitizedBody = sanitizeLogData(req.body);
+    console.log('📦 Request body:', JSON.stringify(sanitizedBody, null, 2));
     
     const { 
       amount, 
@@ -233,6 +275,16 @@ app.post('/api/create-checkout-session', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
+      });
+    }
+
+    // CRITICAL: Reject zero or negative amounts - these should be handled client-side
+    const amountValue = parseFloat(amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      console.log('❌ Invalid amount:', amount, 'Amount must be greater than 0');
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount. Zero or negative amounts should be processed as free purchases.'
       });
     }
 
@@ -283,15 +335,13 @@ app.post('/api/create-checkout-session', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Stripe error:', error.message);
-    console.error('❌ Full error details:', error);
+    if (isDevelopment) {
+      console.error('❌ Full error details:', error);
+    }
     
     res.status(500).json({ 
       success: false,
-      error: error.message,
-      keyInfo: {
-        exists: !!process.env.STRIPE_SECRET_KEY,
-        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY'
-      }
+      error: sanitizeError(error, isDevelopment)
     });
   }
 });
@@ -418,24 +468,35 @@ app.post('/api/send-confirmation-email', async (req, res) => {
   }
 });
 
-// Debug endpoint to track purchase flow
-app.post('/api/debug-purchase', async (req, res) => {
-  try {
-    const { sessionId, squareNumber, step, data } = req.body;
-    console.log('🔍 PURCHASE DEBUG:', {
-      sessionId,
-      squareNumber, 
-      step,
-      timestamp: new Date().toISOString(),
-      data: data ? `Has logo: ${!!data.logoData}` : 'No data'
-    });
-    
-    res.json({ success: true, logged: true });
-  } catch (error) {
-    console.error('Debug error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+// SECURITY: Debug endpoint only available in development
+// Debug endpoint to track purchase flow (DEVELOPMENT ONLY)
+if (isDevelopment) {
+  app.post('/api/debug-purchase', async (req, res) => {
+    try {
+      const { sessionId, squareNumber, step, data } = req.body;
+      // SECURITY: Sanitize log data
+      const sanitizedData = sanitizeLogData({
+        sessionId,
+        squareNumber, 
+        step,
+        timestamp: new Date().toISOString(),
+        data: data ? `Has logo: ${!!data.logoData}` : 'No data'
+      });
+      console.log('🔍 PURCHASE DEBUG:', sanitizedData);
+      
+      res.json({ success: true, logged: true });
+    } catch (error) {
+      console.error('Debug error:', error);
+      res.status(500).json({ success: false, error: sanitizeError(error, isDevelopment) });
+    }
+  });
+  console.log('⚠️ Debug endpoint /api/debug-purchase enabled (DEVELOPMENT ONLY)');
+} else {
+  // In production, return 404 for debug endpoints
+  app.post('/api/debug-purchase', (req, res) => {
+    res.status(404).json({ success: false, error: 'Not found' });
+  });
+}
 
 // Virus scanning endpoint using VirusTotal API
 // Requires VIRUSTOTAL_API_KEY in environment variables
