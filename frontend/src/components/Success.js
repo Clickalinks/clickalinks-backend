@@ -98,6 +98,9 @@ const Success = () => {
             contactEmail: foundPurchase.contactEmail || foundPurchase.email,
             website: foundPurchase.website || foundPurchase.dealLink,
             finalAmount: foundPurchase.amount || foundPurchase.finalAmount || 10,
+            originalAmount: foundPurchase.originalAmount || foundPurchase.amount || foundPurchase.finalAmount || 10,
+            discountAmount: foundPurchase.discountAmount || 0,
+            promoCode: foundPurchase.promoCode || foundPurchase.appliedPromo?.code || null,
             selectedDuration: foundPurchase.duration || foundPurchase.selectedDuration || 30,
             transactionId: sessionId,
             logoData: foundPurchase.logoData || businessFormData.logoData,
@@ -399,13 +402,21 @@ const Success = () => {
     
     // Send confirmation email (non-blocking, don't wait for response)
     if (data.contactEmail && purchaseData.paymentStatus === 'paid') {
+      // Get promo code info from localStorage if available
+      const purchaseFromStorage = JSON.parse(localStorage.getItem(`purchase_${data.squareNumber}`) || '{}');
+      const appliedPromo = purchaseFromStorage.appliedPromo || null;
+      
       const emailData = {
         contactEmail: data.contactEmail,
         businessName: data.businessName,
+        website: data.website || data.dealLink || '',
         squareNumber: data.squareNumber,
         pageNumber: data.pageNumber || 1,
         selectedDuration: data.selectedDuration || 30,
+        originalAmount: purchaseFromStorage.originalAmount || data.originalAmount || data.finalAmount || 10,
+        discountAmount: purchaseFromStorage.discountAmount || data.discountAmount || appliedPromo?.discount || 0,
         finalAmount: data.finalAmount || 0,
+        promoCode: purchaseFromStorage.promoCode || data.promoCode || appliedPromo?.code || null,
         transactionId: data.transactionId,
         paymentStatus: purchaseData.paymentStatus,
         logoData: finalLogoURL

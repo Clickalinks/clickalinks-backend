@@ -99,6 +99,11 @@ const Payment = () => {
       
       // Payment info
       amount: finalAmount || 10,
+      originalAmount: finalAmount || 10, // Store original amount before discount
+      discountAmount: discountAmount || 0, // Store discount amount
+      finalAmount: finalAmountAfterDiscount || finalAmount || 10, // Store final amount after discount
+      promoCode: appliedPromo?.code || null, // Store promo code if applied
+      appliedPromo: appliedPromo || null, // Store full promo object
       duration: selectedDuration || 30,
       purchaseDate: new Date().toISOString(),
       status: 'pending',
