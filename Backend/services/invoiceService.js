@@ -80,7 +80,7 @@ export async function generateInvoicePDF(invoiceData) {
         }
       }
 
-      // Company name and tagline (if logo not added, make it larger)
+      // Only add text if logo not found
       if (!logoAdded) {
         doc.fillColor('white')
           .fontSize(32)
@@ -90,16 +90,8 @@ export async function generateInvoicePDF(invoiceData) {
         doc.fontSize(11)
           .font('Helvetica')
           .text('Direct Advertising Platform', 40, 60);
-      } else {
-        doc.fillColor('white')
-          .fontSize(24)
-          .font('Helvetica-Bold')
-          .text('ClickaLinks', 115, 25);
-        
-        doc.fontSize(9)
-          .font('Helvetica')
-          .text('Direct Advertising Platform', 115, 50);
       }
+      // If logo is added, don't add any text - just use the logo
 
       // Invoice title and number (right side)
       doc.fontSize(22)
@@ -159,7 +151,7 @@ export async function generateInvoicePDF(invoiceData) {
       // Company contact info (compact)
       doc.fontSize(7)
         .fillColor(lightGray)
-        .text('ClickaLinks Ltd. | support@clickalinks.com | www.clickalinks.com', 400, yPos + 30, { align: 'right' });
+        .text('Clicado Media UK Ltd | support@clickalinks.com | www.clickalinks.com', 400, yPos + 30, { align: 'right' });
 
       // Reset color
       doc.fillColor(darkGray);
@@ -184,8 +176,8 @@ export async function generateInvoicePDF(invoiceData) {
 
       yPos += 30;
 
-      // Service line item - compact
-      const serviceDescription = `Square #${invoiceData.squareNumber} (Page ${invoiceData.pageNumber})`;
+      // Service line item - compact with description
+      const serviceDescription = `Advertising Campaign - Square #${invoiceData.squareNumber} (Page ${invoiceData.pageNumber})`;
       const durationText = `${invoiceData.duration} days`;
 
       doc.fontSize(9)
@@ -224,22 +216,22 @@ export async function generateInvoicePDF(invoiceData) {
 
       yPos += 12;
 
-      // Subtotal
+      // Subtotal - fixed spacing to prevent overlap
       doc.fontSize(9)
         .font('Helvetica')
-        .text('Subtotal:', 400, yPos, { align: 'right' })
+        .text('Subtotal:', 400, yPos, { align: 'right', width: 75 })
         .text(`£${(invoiceData.originalAmount || 0).toFixed(2)}`, 480, yPos, { align: 'right', width: 70 });
 
-      yPos += 15;
+      yPos += 18;
 
       if (invoiceData.discountAmount > 0) {
         doc.fontSize(9)
           .fillColor(successGreen)
-          .text('Discount:', 400, yPos, { align: 'right' })
+          .text('Discount:', 400, yPos, { align: 'right', width: 75 })
           .text(`-£${invoiceData.discountAmount.toFixed(2)}`, 480, yPos, { align: 'right', width: 70 });
 
         doc.fillColor(darkGray);
-        yPos += 15;
+        yPos += 18;
       }
 
       // Total - compact box
