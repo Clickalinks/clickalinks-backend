@@ -844,44 +844,222 @@ async function sendWelcomeEmail(purchaseData) {
   const endDate = new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000);
   const totalAmount = finalAmount || 0;
 
-  // Welcome email template - Exciting and colorful!
+  // Professional Welcome Email - NO INVOICE CONTENT
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
-        .email-wrapper { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); padding: 30px 10px; min-height: 100vh; }
-        .container { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .header { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 25%, #c44569 50%, #8e44ad 75%, #667eea 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
-        .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.3)"/><circle cx="80" cy="40" r="2" fill="rgba(255,255,255,0.3)"/><circle cx="40" cy="70" r="2.5" fill="rgba(255,255,255,0.3)"/><circle cx="90" cy="80" r="2" fill="rgba(255,255,255,0.3)"/></svg>'); opacity: 0.3; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+          line-height: 1.6; 
+          color: #1a202c; 
+          margin: 0; 
+          padding: 0; 
+          background: #f7fafc;
+        }
+        .email-wrapper { 
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+          padding: 40px 20px; 
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 0 auto; 
+          background: #ffffff; 
+          border-radius: 16px; 
+          overflow: hidden; 
+          box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .header { 
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+          color: white; 
+          padding: 60px 40px; 
+          text-align: center; 
+          position: relative;
+        }
+        .header::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.2)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.2)"/><circle cx="40" cy="70" r="2" fill="rgba(255,255,255,0.2)"/><circle cx="90" cy="80" r="1.5" fill="rgba(255,255,255,0.2)"/></svg>');
+          opacity: 0.3;
+        }
         .header-content { position: relative; z-index: 1; }
-        .header h1 { margin: 0; font-size: 42px; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); letter-spacing: -1px; }
-        .header p { margin: 15px 0 0 0; font-size: 20px; opacity: 0.95; font-weight: 500; }
-        .success-icon { font-size: 80px; margin-bottom: 20px; display: inline-block; animation: bounce 2s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .content { padding: 45px 35px; background: #ffffff; }
-        .greeting { font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 25px; }
-        .intro-text { font-size: 18px; color: #4a5568; line-height: 2; margin-bottom: 35px; font-weight: 400; }
-        .info-box { background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); border: 3px solid #667eea; border-radius: 15px; padding: 30px; margin: 35px 0; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15); }
-        .info-box h3 { margin: 0 0 25px 0; font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: flex; align-items: center; gap: 10px; }
-        .info-row { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 2px solid #e2e8f0; }
-        .info-row:last-child { border-bottom: none; }
-        .label { font-weight: 700; color: #667eea; font-size: 15px; }
-        .value { color: #1a202c; font-size: 15px; font-weight: 600; text-align: right; }
-        .whats-next { margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%); border-radius: 15px; border-left: 5px solid #ff6b6b; }
-        .whats-next h3 { font-size: 26px; font-weight: 700; color: #ff6b6b; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
-        .whats-next ul { list-style: none; padding: 0; margin: 0; }
-        .whats-next li { padding: 15px 0; color: #4a5568; font-size: 16px; line-height: 1.9; border-left: 4px solid #ff6b6b; padding-left: 20px; margin-bottom: 10px; background: white; border-radius: 8px; padding: 15px 20px; }
-        .whats-next li strong { color: #ff6b6b; font-weight: 700; }
-        .button-container { text-align: center; margin: 45px 0; }
-        .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 50px; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; }
-        .button:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5); }
-        .footer { background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); padding: 35px; text-align: center; }
-        .footer p { margin: 10px 0; color: #a0aec0; font-size: 14px; }
-        .footer a { color: #667eea; text-decoration: none; font-weight: 600; }
-        .celebrate { text-align: center; font-size: 40px; margin: 20px 0; }
+        .success-icon { 
+          font-size: 72px; 
+          margin-bottom: 20px; 
+          display: block;
+          animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+        .header h1 { 
+          margin: 0 0 15px 0; 
+          font-size: 36px; 
+          font-weight: 800; 
+          text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+          letter-spacing: -0.5px;
+        }
+        .header p { 
+          margin: 0; 
+          font-size: 18px; 
+          opacity: 0.95; 
+          font-weight: 500;
+        }
+        .content { 
+          padding: 50px 40px; 
+          background: #ffffff; 
+        }
+        .greeting { 
+          font-size: 28px; 
+          font-weight: 700; 
+          color: #1a202c;
+          margin-bottom: 20px;
+          line-height: 1.3;
+        }
+        .intro-text { 
+          font-size: 17px; 
+          color: #4a5568; 
+          line-height: 1.8; 
+          margin-bottom: 40px;
+        }
+        .intro-text strong {
+          color: #667eea;
+          font-weight: 700;
+        }
+        .info-box { 
+          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); 
+          border: 2px solid #e2e8f0; 
+          border-left: 5px solid #667eea;
+          border-radius: 12px; 
+          padding: 30px; 
+          margin: 30px 0;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .info-box h3 { 
+          margin: 0 0 25px 0; 
+          font-size: 20px; 
+          font-weight: 700; 
+          color: #2d3748;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .info-row { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          padding: 14px 0; 
+          border-bottom: 1px solid #e2e8f0; 
+        }
+        .info-row:last-child { 
+          border-bottom: none; 
+        }
+        .label { 
+          font-weight: 600; 
+          color: #4a5568; 
+          font-size: 15px;
+        }
+        .value { 
+          color: #1a202c; 
+          font-size: 15px; 
+          font-weight: 600; 
+          text-align: right;
+        }
+        .whats-next { 
+          margin-top: 40px; 
+          padding: 35px; 
+          background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%); 
+          border-radius: 12px; 
+          border-left: 5px solid #f56565;
+        }
+        .whats-next h3 { 
+          font-size: 22px; 
+          font-weight: 700; 
+          color: #c53030; 
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .whats-next ul { 
+          list-style: none; 
+          padding: 0; 
+          margin: 0; 
+        }
+        .whats-next li { 
+          padding: 12px 0; 
+          color: #4a5568; 
+          font-size: 16px; 
+          line-height: 1.7;
+          padding-left: 30px;
+          position: relative;
+        }
+        .whats-next li::before {
+          content: '✓';
+          position: absolute;
+          left: 0;
+          color: #f56565;
+          font-weight: bold;
+          font-size: 18px;
+        }
+        .whats-next li strong { 
+          color: #c53030; 
+          font-weight: 700; 
+        }
+        .button-container { 
+          text-align: center; 
+          margin: 45px 0 30px 0; 
+        }
+        .button { 
+          display: inline-block; 
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+          color: white; 
+          padding: 18px 45px; 
+          text-decoration: none; 
+          border-radius: 50px; 
+          font-weight: 700; 
+          font-size: 17px; 
+          box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+          transition: all 0.3s ease;
+          letter-spacing: 0.5px;
+        }
+        .button:hover { 
+          transform: translateY(-2px); 
+          box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+        .footer { 
+          background: #2d3748; 
+          padding: 35px 40px; 
+          text-align: center; 
+        }
+        .footer p { 
+          margin: 8px 0; 
+          color: #a0aec0; 
+          font-size: 14px; 
+        }
+        .footer a { 
+          color: #90cdf4; 
+          text-decoration: none; 
+          font-weight: 600;
+        }
+        .footer a:hover {
+          text-decoration: underline;
+        }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 30px 25px; }
+          .header { padding: 40px 25px; }
+          .header h1 { font-size: 28px; }
+          .greeting { font-size: 24px; }
+        }
       </style>
     </head>
     <body>
@@ -895,12 +1073,11 @@ async function sendWelcomeEmail(purchaseData) {
             </div>
           </div>
           <div class="content">
-            <div class="celebrate">✨ 🎊 🎈 ✨</div>
             <div class="greeting">Hello ${businessName || 'Valued Customer'}! 👋</div>
             <p class="intro-text">🎉 <strong>Congratulations!</strong> Thank you for choosing ClickaLinks! We're absolutely <strong>thrilled</strong> to have you on board! Your advertising campaign has been successfully activated and is now <strong>live on our platform</strong>, ready to attract customers and drive traffic to your business. This is going to be amazing! 🌟</p>
             
             <div class="info-box">
-              <h3>📋 <span>Your Campaign Details</span></h3>
+              <h3>📋 Your Campaign Details</h3>
               <div class="info-row">
                 <span class="label">Business Name:</span>
                 <span class="value">${businessName || 'N/A'}</span>
@@ -924,18 +1101,18 @@ async function sendWelcomeEmail(purchaseData) {
               ${transactionId ? `
               <div class="info-row">
                 <span class="label">Transaction ID:</span>
-                <span class="value" style="font-family: monospace; font-size: 12px;">${transactionId}</span>
+                <span class="value" style="font-family: monospace; font-size: 12px; word-break: break-all;">${transactionId}</span>
               </div>
               ` : ''}
             </div>
 
             <div class="whats-next">
-              <h3>✨ <span>What Happens Next?</span></h3>
+              <h3>✨ What Happens Next?</h3>
               <ul>
-                <li><strong>🎯 Your ad is live:</strong> Your logo is now visible on square #${squareNumber} and ready to attract customers!</li>
-                <li><strong>🔗 Clickable link:</strong> Visitors can click your logo to visit your website directly.</li>
-                <li><strong>⚖️ Fair placement:</strong> Your position may change during regular shuffles, ensuring fair visibility for all businesses.</li>
-                <li><strong>⏰ Active duration:</strong> Your ad will remain active for ${selectedDuration} days from today.</li>
+                <li><strong>Your ad is live:</strong> Your logo is now visible on square #${squareNumber} and ready to attract customers!</li>
+                <li><strong>Clickable link:</strong> Visitors can click your logo to visit your website directly.</li>
+                <li><strong>Fair placement:</strong> Your position may change during regular shuffles, ensuring fair visibility for all businesses.</li>
+                <li><strong>Active duration:</strong> Your ad will remain active for ${selectedDuration} days from today.</li>
               </ul>
             </div>
 
@@ -1035,51 +1212,251 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
   const discountAmt = discountAmount || 0;
   const totalAmount = Math.max(0, originalAmt - discountAmt);
 
-  // Professional invoice email template
+  // Professional Invoice Email - Clean and Business-Focused
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f7fa; }
-        .email-wrapper { background-color: #f5f7fa; padding: 40px 20px; }
-        .container { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        .header p { margin: 8px 0 0 0; font-size: 15px; opacity: 0.95; }
-        .invoice-icon { font-size: 48px; margin-bottom: 15px; }
-        .content { padding: 40px 30px; }
-        .intro-text { font-size: 16px; color: #4a5568; line-height: 1.8; margin-bottom: 30px; }
-        .invoice-box { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 30px; margin: 30px 0; }
-        .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
-        .invoice-info h3 { margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
-        .invoice-info p { margin: 5px 0; color: #2d3748; font-size: 15px; }
-        .invoice-number { font-size: 20px; font-weight: 700; color: #2563eb; }
-        .invoice-table { width: 100%; border-collapse: collapse; margin: 25px 0; }
-        .invoice-table thead { background: #f1f5f9; }
-        .invoice-table th { padding: 15px; text-align: left; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .invoice-table td { padding: 15px; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 15px; }
-        .invoice-table .text-right { text-align: right; }
-        .discount-row { background: #f0fdf4; }
-        .discount-row td { color: #10b981; font-weight: 600; }
-        .totals-section { margin-top: 25px; padding-top: 25px; border-top: 2px solid #e2e8f0; }
-        .total-row { display: flex; justify-content: space-between; padding: 10px 0; }
-        .total-label { font-weight: 600; color: #475569; font-size: 15px; }
-        .total-amount { font-weight: 600; color: #1e293b; font-size: 15px; }
-        .grand-total { margin-top: 20px; padding: 20px; background: #f8fafc; border: 2px solid #2563eb; border-radius: 6px; }
-        .grand-total .total-label { font-size: 18px; color: #1e293b; }
-        .grand-total .total-amount { font-size: 24px; color: #2563eb; font-weight: 700; }
-        .free-total { background: #f0fdf4; border-color: #10b981; }
-        .free-total .total-amount { color: #10b981; font-size: 28px; }
-        .download-section { margin: 30px 0; padding: 25px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
-        .download-section h3 { margin: 0 0 15px 0; font-size: 18px; font-weight: 600; color: #92400e; }
-        .download-section p { margin: 10px 0; color: #78350f; font-size: 14px; line-height: 1.6; }
-        .download-btn { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; margin-top: 10px; transition: background 0.3s; }
-        .download-btn:hover { background: #059669; }
-        .footer { background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
-        .footer p { margin: 8px 0; color: #64748b; font-size: 13px; }
-        .footer a { color: #2563eb; text-decoration: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+          line-height: 1.6; 
+          color: #1a202c; 
+          margin: 0; 
+          padding: 0; 
+          background: #f7fafc;
+        }
+        .email-wrapper { 
+          background: #f7fafc; 
+          padding: 40px 20px; 
+        }
+        .container { 
+          max-width: 700px; 
+          margin: 0 auto; 
+          background: #ffffff; 
+          border-radius: 12px; 
+          overflow: hidden; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header { 
+          background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); 
+          color: white; 
+          padding: 45px 40px; 
+          text-align: center; 
+        }
+        .header h1 { 
+          margin: 0 0 10px 0; 
+          font-size: 32px; 
+          font-weight: 700; 
+          letter-spacing: -0.5px; 
+        }
+        .header p { 
+          margin: 0; 
+          font-size: 16px; 
+          opacity: 0.95; 
+        }
+        .invoice-icon { 
+          font-size: 56px; 
+          margin-bottom: 15px; 
+          display: block;
+        }
+        .content { 
+          padding: 45px 40px; 
+        }
+        .intro-text { 
+          font-size: 16px; 
+          color: #4a5568; 
+          line-height: 1.8; 
+          margin-bottom: 35px; 
+        }
+        .invoice-box { 
+          background: #f8fafc; 
+          border: 2px solid #e2e8f0; 
+          border-radius: 12px; 
+          padding: 35px; 
+          margin: 30px 0; 
+        }
+        .invoice-header { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: flex-start; 
+          margin-bottom: 30px; 
+          padding-bottom: 25px; 
+          border-bottom: 2px solid #e2e8f0; 
+        }
+        .invoice-info { flex: 1; }
+        .invoice-info h3 { 
+          margin: 0 0 15px 0; 
+          font-size: 12px; 
+          font-weight: 700; 
+          color: #718096; 
+          text-transform: uppercase; 
+          letter-spacing: 1.5px; 
+        }
+        .invoice-info p { 
+          margin: 6px 0; 
+          color: #2d3748; 
+          font-size: 15px; 
+          line-height: 1.6;
+        }
+        .invoice-info.right { text-align: right; }
+        .invoice-number { 
+          font-size: 24px; 
+          font-weight: 700; 
+          color: #2563eb; 
+          margin: 5px 0;
+        }
+        .invoice-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin: 30px 0; 
+        }
+        .invoice-table thead { 
+          background: #f1f5f9; 
+        }
+        .invoice-table th { 
+          padding: 16px; 
+          text-align: left; 
+          font-weight: 700; 
+          color: #475569; 
+          font-size: 12px; 
+          text-transform: uppercase; 
+          letter-spacing: 1px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+        .invoice-table td { 
+          padding: 18px 16px; 
+          border-bottom: 1px solid #e2e8f0; 
+          color: #475569; 
+          font-size: 15px; 
+        }
+        .invoice-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+        .invoice-table .text-right { 
+          text-align: right; 
+        }
+        .discount-row { 
+          background: #f0fdf4; 
+        }
+        .discount-row td { 
+          color: #10b981; 
+          font-weight: 600; 
+        }
+        .totals-section { 
+          margin-top: 30px; 
+          padding-top: 25px; 
+          border-top: 2px solid #e2e8f0; 
+        }
+        .total-row { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          padding: 12px 0; 
+        }
+        .total-label { 
+          font-weight: 600; 
+          color: #475569; 
+          font-size: 15px; 
+        }
+        .total-amount { 
+          font-weight: 600; 
+          color: #1e293b; 
+          font-size: 15px; 
+        }
+        .grand-total { 
+          margin-top: 20px; 
+          padding: 25px; 
+          background: #f8fafc; 
+          border: 2px solid #2563eb; 
+          border-radius: 8px; 
+        }
+        .grand-total .total-label { 
+          font-size: 18px; 
+          color: #1e293b; 
+        }
+        .grand-total .total-amount { 
+          font-size: 26px; 
+          color: #2563eb; 
+          font-weight: 700; 
+        }
+        .free-total { 
+          background: #f0fdf4; 
+          border-color: #10b981; 
+        }
+        .free-total .total-amount { 
+          color: #10b981; 
+          font-size: 30px; 
+        }
+        .download-section { 
+          margin: 35px 0; 
+          padding: 30px; 
+          background: #fffbeb; 
+          border-left: 5px solid #f59e0b; 
+          border-radius: 8px; 
+        }
+        .download-section h3 { 
+          margin: 0 0 12px 0; 
+          font-size: 18px; 
+          font-weight: 700; 
+          color: #92400e; 
+        }
+        .download-section p { 
+          margin: 8px 0; 
+          color: #78350f; 
+          font-size: 14px; 
+          line-height: 1.7; 
+        }
+        .download-btn { 
+          display: inline-block; 
+          background: #10b981; 
+          color: white; 
+          padding: 16px 32px; 
+          text-decoration: none; 
+          border-radius: 8px; 
+          font-weight: 700; 
+          font-size: 16px; 
+          margin-top: 15px; 
+          transition: all 0.3s;
+          box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        }
+        .download-btn:hover { 
+          background: #059669; 
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+        }
+        .footer { 
+          background: #2d3748; 
+          padding: 35px 40px; 
+          text-align: center; 
+        }
+        .footer p { 
+          margin: 8px 0; 
+          color: #a0aec0; 
+          font-size: 13px; 
+          line-height: 1.6;
+        }
+        .footer strong {
+          color: #e2e8f0;
+          font-weight: 600;
+        }
+        .footer a { 
+          color: #90cdf4; 
+          text-decoration: none; 
+          font-weight: 600;
+        }
+        .footer a:hover {
+          text-decoration: underline;
+        }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 30px 25px; }
+          .header { padding: 35px 25px; }
+          .invoice-header { flex-direction: column; gap: 20px; }
+          .invoice-info.right { text-align: left; }
+        }
       </style>
     </head>
     <body>
@@ -1092,7 +1469,7 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
           </div>
           <div class="content">
             <p class="intro-text">Dear ${businessName || 'Valued Customer'},</p>
-            <p class="intro-text">Please find your invoice attached below. You can download it as an HTML file for your records.</p>
+            <p class="intro-text">Please find your invoice details below. You can download a printable version using the button at the bottom of this email.</p>
             
             <div class="invoice-box">
               <div class="invoice-header">
@@ -1100,13 +1477,13 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
                   <h3>Invoice To</h3>
                   <p><strong>${businessName || 'N/A'}</strong></p>
                   <p>${contactEmail || ''}</p>
-                  ${website ? `<p>${website}</p>` : ''}
+                  ${website ? `<p style="color: #2563eb;">${website}</p>` : ''}
                 </div>
-                <div class="invoice-info" style="text-align: right;">
+                <div class="invoice-info right">
                   <h3>Invoice Details</h3>
                   <p class="invoice-number">#${invoiceNumber}</p>
                   <p>Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  ${transactionId ? `<p style="font-size: 12px; color: #64748b;">Transaction: ${transactionId}</p>` : ''}
+                  ${transactionId ? `<p style="font-size: 13px; color: #64748b; margin-top: 8px;">Transaction ID:<br>${transactionId}</p>` : ''}
                 </div>
               </div>
 
@@ -1120,15 +1497,15 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Advertising Campaign - Square #${squareNumber} (Page ${pageNumber})</td>
+                    <td><strong>Advertising Campaign</strong><br><span style="color: #64748b; font-size: 13px;">Square #${squareNumber} (Page ${pageNumber})</span></td>
                     <td>${selectedDuration} days</td>
-                    <td class="text-right">£${originalAmt.toFixed(2)}</td>
+                    <td class="text-right"><strong>£${originalAmt.toFixed(2)}</strong></td>
                   </tr>
                   ${discountAmt > 0 ? `
                   <tr class="discount-row">
-                    <td>Discount${promoCode ? ` (${promoCode})` : ''}</td>
+                    <td><strong>Discount${promoCode ? ` (${promoCode})` : ''}</strong></td>
                     <td></td>
-                    <td class="text-right">-£${discountAmt.toFixed(2)}</td>
+                    <td class="text-right"><strong>-£${discountAmt.toFixed(2)}</strong></td>
                   </tr>
                   ` : ''}
                 </tbody>
@@ -1164,7 +1541,7 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
           <div class="footer">
             <p><strong>Clicado Media UK Ltd</strong></p>
             <p style="font-size: 12px; color: #94a3b8;">Registered in England & Wales, Registration Number: 16904433</p>
-            <p style="margin-top: 15px;">Thank you for your business with ClickaLinks!</p>
+            <p style="margin-top: 20px;">Thank you for your business with ClickaLinks!</p>
             <p>Questions about your invoice? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}">${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}</a></p>
             <p style="margin-top: 15px;">&copy; ${new Date().getFullYear()} ClickaLinks. All rights reserved.</p>
           </div>
