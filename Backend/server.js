@@ -3,10 +3,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
-import { sendAdConfirmationEmail } from './services/emailService.js';
+import { sendAdConfirmationEmail, sendAdminNotificationEmail } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
+import { performGlobalShuffle } from './services/shuffleService.js';
 import {
   securityHeaders,
   generalRateLimit,
@@ -27,6 +28,11 @@ console.log('🔑 ADMIN_API_KEY check:', process.env.ADMIN_API_KEY ? `SET (${pro
 
 
 const app = express();
+
+// CRITICAL: Trust proxy for rate limiting behind Render.com or other proxies
+// This allows express-rate-limit to correctly identify users via X-Forwarded-For header
+app.set('trust proxy', true);
+console.log('✅ Trust proxy enabled (for rate limiting behind proxy)');
 
 // SECURITY: Apply security headers first
 app.use(securityHeaders);
@@ -432,6 +438,21 @@ app.post('/api/sync-purchase', async (req, res) => {
       sendAdConfirmationEmail(purchaseData).catch(err => {
         console.warn('⚠️ Email send failed (non-blocking):', err.message);
       });
+      
+      // Send admin notification email (non-blocking but with better error handling)
+      console.log('📧 Attempting to send admin notification email from sync-purchase...');
+      sendAdminNotificationEmail('purchase', purchaseData)
+        .then(adminResult => {
+          if (adminResult.success) {
+            console.log('✅ Admin notification email sent successfully from sync-purchase:', adminResult.messageId);
+          } else {
+            console.error('❌ Admin notification email failed from sync-purchase:', adminResult.message || adminResult.error);
+          }
+        })
+        .catch(err => {
+          console.error('❌ Admin notification email error from sync-purchase:', err.message);
+          console.error('❌ Admin notification error stack:', err.stack);
+        });
     }
     
     res.json({
@@ -453,30 +474,88 @@ app.post('/api/send-confirmation-email', async (req, res) => {
   try {
     const purchaseData = req.body;
     
+    console.log('📧 Email endpoint called with data:', {
+      hasEmail: !!purchaseData.contactEmail,
+      businessName: purchaseData.businessName,
+      squareNumber: purchaseData.squareNumber,
+      finalAmount: purchaseData.finalAmount,
+      promoCode: purchaseData.promoCode,
+      transactionId: purchaseData.transactionId
+    });
+    
     if (!purchaseData.contactEmail) {
+      console.error('❌ Email endpoint: Missing contactEmail');
       return res.status(400).json({
         success: false,
         error: 'Email address is required'
       });
     }
     
+    // Send customer confirmation email
     const result = await sendAdConfirmationEmail(purchaseData);
     
+    // Send admin notification email (non-blocking but with better error handling)
+    console.log('📧 Attempting to send admin notification email...');
+    console.log('📧 Purchase data for admin notification:', {
+      businessName: purchaseData.businessName,
+      contactEmail: purchaseData.contactEmail,
+      squareNumber: purchaseData.squareNumber,
+      pageNumber: purchaseData.pageNumber,
+      selectedDuration: purchaseData.selectedDuration,
+      originalAmount: purchaseData.originalAmount,
+      discountAmount: purchaseData.discountAmount,
+      finalAmount: purchaseData.finalAmount,
+      transactionId: purchaseData.transactionId,
+      promoCode: purchaseData.promoCode
+    });
+    
+    // Send admin notification email (non-blocking but with comprehensive error handling)
+    sendAdminNotificationEmail('purchase', purchaseData)
+      .then(adminResult => {
+        if (adminResult.success) {
+          console.log('✅ Admin notification email sent successfully:', adminResult.messageId);
+          console.log('✅ Email sent to: ads@clickalinks.com');
+        } else {
+          console.error('❌ Admin notification email failed:', adminResult.message || adminResult.error);
+          console.error('❌ Error details:', adminResult.error);
+          console.error('❌ This is likely due to SMTP authentication issues.');
+          console.error('❌ Check IONOS control panel: Enable SMTP sending for ads@clickalinks.com');
+          console.error('❌ Verify SMTP_PASS in Render.com matches email account password');
+          console.error('❌ See IONOS_SMTP_FIX.md for detailed troubleshooting steps');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Admin notification email error:', err.message);
+        console.error('❌ Error code:', err.code);
+        console.error('❌ Error response:', err.response);
+        console.error('❌ Error command:', err.command);
+        console.error('❌ Admin notification error stack:', err.stack);
+        console.error('❌ Admin notification error details:', JSON.stringify(err, null, 2));
+        console.error('🔧 TROUBLESHOOTING:');
+        console.error('   1. Check IONOS control panel - enable SMTP sending');
+        console.error('   2. Verify SMTP credentials in Render.com');
+        console.error('   3. Check IONOS_SMTP_FIX.md for solutions');
+      });
+    
     if (result.success) {
+      console.log('✅ Email endpoint: Both emails sent successfully');
       res.json({
         success: true,
         message: 'Confirmation email sent successfully',
         messageId: result.messageId
       });
     } else {
+      console.error('❌ Email endpoint: Customer email failed:', result.error || result.message);
       res.status(500).json({
         success: false,
-        error: result.message || 'Failed to send email'
+        error: result.message || 'Failed to send email',
+        details: result.error
       });
     }
     
   } catch (error) {
-    console.error('Error sending confirmation email:', error);
+    console.error('❌ Email endpoint error:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
       error: error.message
@@ -623,12 +702,158 @@ app.post('/api/scan-file', async (req, res) => {
   }
 });
 
+// Test admin email endpoint (for debugging email issues)
+app.post('/api/test-admin-email', async (req, res) => {
+  try {
+    console.log('📧 Test admin email endpoint called');
+    
+    const testData = {
+      businessName: req.body.businessName || 'Test Business',
+      contactEmail: req.body.contactEmail || 'test@example.com',
+      squareNumber: req.body.squareNumber || 1,
+      pageNumber: req.body.pageNumber || 1,
+      selectedDuration: req.body.selectedDuration || 30,
+      originalAmount: req.body.originalAmount || 10,
+      discountAmount: req.body.discountAmount || 0,
+      finalAmount: req.body.finalAmount || 10,
+      transactionId: req.body.transactionId || 'TEST-' + Date.now(),
+      promoCode: req.body.promoCode || null
+    };
+    
+    console.log('📧 Test admin email data:', testData);
+    
+    const result = await sendAdminNotificationEmail('purchase', testData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Test admin email sent successfully',
+        messageId: result.messageId,
+        sentTo: process.env.ADMIN_NOTIFICATION_EMAIL || 
+                process.env['ADMIN-NOTIFICATION-EMAIL'] || 
+                'ads@clickalinks.com'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error || result.message,
+        code: result.code,
+        message: 'Failed to send test admin email',
+        troubleshooting: {
+          smtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+          sendgridConfigured: !!process.env.SENDGRID_API_KEY,
+          adminEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 
+                      process.env['ADMIN-NOTIFICATION-EMAIL'] || 
+                      'ads@clickalinks.com',
+          smtpHost: process.env.SMTP_HOST || 'Not set',
+          smtpUser: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 10) + '...' : 'Not set'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('❌ Test admin email error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to send test admin email'
+    });
+  }
+});
+
+// ============================================
+// AUTO-SHUFFLE SCHEDULER
+// ============================================
+// Automatically shuffle squares every 2 hours
+// This runs server-side, independent of frontend activity
+const SHUFFLE_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+let shuffleIntervalId = null;
+let isShuffling = false; // Prevent concurrent shuffles
+
+/**
+ * Calculate time until next shuffle based on 2-hour periods
+ * Shuffles happen at: 00:00, 02:00, 04:00, 06:00, 08:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00
+ */
+function getTimeUntilNextShuffle() {
+  const now = Date.now();
+  const currentPeriod = Math.floor(now / SHUFFLE_INTERVAL);
+  const nextShuffleTime = (currentPeriod + 1) * SHUFFLE_INTERVAL;
+  return Math.max(0, nextShuffleTime - now);
+}
+
+/**
+ * Perform automatic shuffle
+ * This runs every 2 hours automatically
+ */
+async function performAutoShuffle() {
+  // Prevent concurrent shuffles
+  if (isShuffling) {
+    console.log('⏭️ Shuffle already in progress, skipping...');
+    return;
+  }
+
+  isShuffling = true;
+  const startTime = Date.now();
+  
+  try {
+    console.log('🔄 [AUTO-SHUFFLE] Starting automatic shuffle...');
+    console.log(`🕐 [AUTO-SHUFFLE] Time: ${new Date().toISOString()}`);
+    
+    const result = await performGlobalShuffle();
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ [AUTO-SHUFFLE] Completed successfully in ${duration}ms`);
+    console.log(`📊 [AUTO-SHUFFLE] Shuffled ${result.shuffledCount || 0} squares`);
+    console.log(`🌱 [AUTO-SHUFFLE] Seed used: ${result.seed || 'N/A'}`);
+    
+  } catch (error) {
+    console.error('❌ [AUTO-SHUFFLE] Error during automatic shuffle:', error);
+    console.error('❌ [AUTO-SHUFFLE] Error details:', error.message);
+    console.error('❌ [AUTO-SHUFFLE] Stack:', error.stack);
+  } finally {
+    isShuffling = false;
+  }
+}
+
+/**
+ * Initialize auto-shuffle scheduler
+ * Calculates time until next 2-hour boundary and schedules accordingly
+ */
+function initializeAutoShuffle() {
+  // Calculate time until next shuffle
+  const timeUntilNext = getTimeUntilNextShuffle();
+  const nextShuffleDate = new Date(Date.now() + timeUntilNext);
+  
+  console.log('⏰ [AUTO-SHUFFLE] Initializing automatic shuffle scheduler...');
+  console.log(`⏰ [AUTO-SHUFFLE] Next shuffle in: ${Math.floor(timeUntilNext / 1000 / 60)} minutes`);
+  console.log(`⏰ [AUTO-SHUFFLE] Next shuffle at: ${nextShuffleDate.toISOString()}`);
+  console.log(`⏰ [AUTO-SHUFFLE] Shuffle interval: Every 2 hours`);
+  
+  // Schedule first shuffle at the next 2-hour boundary
+  setTimeout(() => {
+    // Perform first shuffle
+    performAutoShuffle().catch(err => {
+      console.error('❌ [AUTO-SHUFFLE] Error in initial shuffle:', err);
+    });
+    
+    // Then set up recurring interval
+    shuffleIntervalId = setInterval(() => {
+      performAutoShuffle().catch(err => {
+        console.error('❌ [AUTO-SHUFFLE] Error in scheduled shuffle:', err);
+      });
+    }, SHUFFLE_INTERVAL);
+    
+    console.log('✅ [AUTO-SHUFFLE] Scheduler initialized and running');
+  }, timeUntilNext);
+}
+
 // Start server AFTER all routes are defined
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Virus scan endpoint available at: POST /api/scan-file`);
   console.log(`✅ Debug endpoint available at: POST /api/debug-purchase`);
   console.log(`✅ Email confirmation endpoint available at: POST /api/send-confirmation-email`);
+  console.log(`✅ Test admin email endpoint available at: POST /api/test-admin-email`);
   console.log(`✅ Promo code validation available at: POST /api/promo-code/validate`);
   console.log(`✅ Promo code bulk create available at: POST /api/promo-code/bulk-create`);
   console.log(`✅ Shuffle endpoint available at: POST /admin/shuffle`);
@@ -640,4 +865,7 @@ app.listen(PORT, '0.0.0.0', () => {
   } else {
     console.warn(`⚠️ Email service not configured - emails will not be sent`);
   }
+  
+  // Initialize auto-shuffle scheduler
+  initializeAutoShuffle();
 });
