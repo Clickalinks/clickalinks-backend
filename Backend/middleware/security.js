@@ -31,12 +31,18 @@ export const securityHeaders = helmet({
 });
 
 // Rate limiting configurations
+// Note: trust proxy must be set in server.js before using these limiters
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Use custom keyGenerator to avoid X-Forwarded-For validation issues
+  keyGenerator: (req) => {
+    // Trust proxy is set in server.js, so req.ip will be correct
+    return req.ip || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 // Stricter rate limit for promo code validation (prevent brute force)
@@ -46,6 +52,9 @@ export const promoCodeRateLimit = rateLimit({
   message: 'Too many promo code attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 // Stricter rate limit for payment endpoints
@@ -55,6 +64,9 @@ export const paymentRateLimit = rateLimit({
   message: 'Too many payment attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 // Very strict rate limit for admin endpoints
@@ -64,6 +76,9 @@ export const adminRateLimit = rateLimit({
   message: 'Too many admin requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 // Request timeout configuration
