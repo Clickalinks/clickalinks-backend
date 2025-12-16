@@ -14,7 +14,7 @@ import {
   bulkDeletePromoCodes
 } from '../services/promoCodeService.js';
 import { promoCodeRateLimit } from '../middleware/security.js';
-import { body, validationResult, custom } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import { verifyAdminToken } from './admin.js';
 
 const router = express.Router();
