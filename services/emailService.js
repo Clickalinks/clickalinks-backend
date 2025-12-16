@@ -550,23 +550,39 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
         .header { 
           background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); 
           color: white; 
-          padding: 45px 40px; 
+          padding: 35px 30px; 
           text-align: center; 
+          position: relative;
+        }
+        .header-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+        }
+        .logo-container {
+          margin-bottom: 10px;
+        }
+        .logo-img {
+          max-width: 200px;
+          height: auto;
+          display: block;
+          margin: 0 auto;
         }
         .header h1 { 
-          margin: 0 0 10px 0; 
-          font-size: 32px; 
+          margin: 0; 
+          font-size: 28px; 
           font-weight: 700; 
           letter-spacing: -0.5px; 
         }
         .header p { 
           margin: 0; 
-          font-size: 16px; 
+          font-size: 15px; 
           opacity: 0.95; 
         }
         .invoice-icon { 
-          font-size: 56px; 
-          margin-bottom: 15px; 
+          font-size: 48px; 
+          margin-bottom: 10px; 
           display: block;
         }
         .content { 
@@ -759,7 +775,11 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
         }
         @media only screen and (max-width: 600px) {
           .content { padding: 30px 25px; }
-          .header { padding: 35px 25px; }
+          .header { padding: 25px 20px; }
+          .header h1 { font-size: 24px; }
+          .header p { font-size: 14px; }
+          .logo-img { max-width: 160px; }
+          .invoice-icon { font-size: 40px; margin-bottom: 8px; }
           .invoice-header { flex-direction: column; gap: 20px; }
           .invoice-info.right { text-align: left; }
         }
@@ -769,9 +789,14 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
       <div class="email-wrapper">
         <div class="container">
           <div class="header">
-            <div class="invoice-icon">📄</div>
-            <h1>Your Invoice</h1>
-            <p>Invoice #${invoiceNumber}</p>
+            <div class="header-content">
+              <div class="logo-container">
+                <img src="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/logo.PNG" alt="ClickaLinks Logo" class="logo-img" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
+              </div>
+              <div class="invoice-icon">📄</div>
+              <h1>Your Invoice</h1>
+              <p>Invoice #${invoiceNumber}</p>
+            </div>
           </div>
           <div class="content">
             <p class="intro-text">Dear ${businessName || 'Valued Customer'},</p>
@@ -1314,13 +1339,16 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
     .invoice-header {
       background: linear-gradient(135deg,rgba(37, 100, 235, 0.54) 0%,rgba(30, 64, 175, 0.67) 100%);
       color: white;
-      padding: 40px;
+      padding: 35px 30px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
     }
     .invoice-header-left {
       flex: 1;
+      min-width: 200px;
     }
     .logo-container {
       display: flex;
@@ -1328,41 +1356,66 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
       gap: 12px;
       margin-bottom: 10px;
     }
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-      border-radius: 8px;
+    .logo-img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+    }
+    .invoice-header-text {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: white;
+      flex-direction: column;
+      gap: 5px;
     }
     .invoice-header h1 {
-      font-size: 32px;
+      font-size: 28px;
       margin: 0;
       font-weight: 700;
       color: white;
       letter-spacing: -0.5px;
+      line-height: 1.2;
     }
     .invoice-header .tagline {
       font-size: 13px;
       color: rgba(255, 255, 255, 0.9);
-      margin-top: 5px;
+      margin-top: 2px;
     }
     .invoice-header-right {
       text-align: right;
+      min-width: 180px;
     }
     .invoice-header-right p {
       font-size: 13px;
       color: rgba(255, 255, 255, 0.95);
       margin: 5px 0;
+      line-height: 1.5;
     }
     .invoice-header-right a {
       color: rgba(255, 255, 255, 0.95);
       text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .invoice-header {
+        flex-direction: column;
+        padding: 25px 20px;
+        text-align: center;
+      }
+      .invoice-header-left {
+        width: 100%;
+        text-align: center;
+      }
+      .logo-container {
+        justify-content: center;
+      }
+      .logo-img {
+        max-width: 150px;
+      }
+      .invoice-header h1 {
+        font-size: 24px;
+      }
+      .invoice-header-right {
+        width: 100%;
+        text-align: center;
+      }
     }
     .invoice-body {
       padding: 40px;
@@ -1553,11 +1606,7 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
     <div class="invoice-header">
       <div class="invoice-header-left">
         <div class="logo-container">
-          <div class="logo-icon">C</div>
-          <div>
-            <h1>Clickalinks</h1>
-            <p class="tagline">Click Shop, Repeat</p>
-          </div>
+          <img src="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/logo.PNG" alt="ClickaLinks Logo" class="logo-img" style="max-width: 180px; height: auto; display: block;" />
         </div>
       </div>
       <div class="invoice-header-right">
