@@ -4,8 +4,39 @@
  */
 
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import timeout from 'express-timeout-handler';
+
+// Create a keyGenerator that properly handles IPv6 addresses
+// Use ipKeyGenerator helper function as required by express-rate-limit v8
+// Get IP from headers (trust proxy enabled) and pass to ipKeyGenerator
+// IMPORTANT: Do NOT access req.ip directly - this triggers validation error
+const safeKeyGenerator = (req) => {
+  // Get IP from X-Forwarded-For header (trust proxy populates this)
+  // Never access req.ip directly - it triggers IPv6 validation warning
+  let ip = req.headers['x-forwarded-for'];
+  
+  if (ip) {
+    // X-Forwarded-For can contain multiple IPs separated by commas
+    // Take the first one (original client IP)
+    ip = ip.split(',')[0].trim();
+  } else {
+    // Fallback to X-Real-IP header
+    ip = req.headers['x-real-ip'];
+    if (ip) {
+      ip = ip.trim();
+    } else {
+      // If no headers available, use 'unknown'
+      // This should not happen when trust proxy is enabled behind Render
+      ip = 'unknown';
+    }
+  }
+  
+  // Use ipKeyGenerator helper to properly handle IPv6 addresses
+  // This is required by express-rate-limit v8 to avoid validation errors
+  // ipKeyGenerator handles IPv6 normalization (returns CIDR subnet for IPv6)
+  return ipKeyGenerator(ip);
+};
 
 // Security headers configuration
 export const securityHeaders = helmet({
@@ -38,11 +69,8 @@ export const generalRateLimit = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  // Use custom keyGenerator to avoid X-Forwarded-For validation issues
-  keyGenerator: (req) => {
-    // Trust proxy is set in server.js, so req.ip will be correct
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  },
+  // Use safeKeyGenerator which uses ipKeyGenerator helper for proper IPv6 handling
+  keyGenerator: safeKeyGenerator,
 });
 
 // Stricter rate limit for promo code validation (prevent brute force)
@@ -52,9 +80,8 @@ export const promoCodeRateLimit = rateLimit({
   message: 'Too many promo code attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  },
+  // Use safeKeyGenerator which uses ipKeyGenerator helper for proper IPv6 handling
+  keyGenerator: safeKeyGenerator,
 });
 
 // Stricter rate limit for payment endpoints
@@ -64,9 +91,8 @@ export const paymentRateLimit = rateLimit({
   message: 'Too many payment attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  },
+  // Use safeKeyGenerator which uses ipKeyGenerator helper for proper IPv6 handling
+  keyGenerator: safeKeyGenerator,
 });
 
 // Very strict rate limit for admin endpoints
@@ -76,9 +102,8 @@ export const adminRateLimit = rateLimit({
   message: 'Too many admin requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  },
+  // Use safeKeyGenerator which uses ipKeyGenerator helper for proper IPv6 handling
+  keyGenerator: safeKeyGenerator,
 });
 
 // Request timeout configuration
