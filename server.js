@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
+// Initialize Firebase Admin first (before importing services that depend on it)
+import './config/firebaseAdmin.js';
 import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
