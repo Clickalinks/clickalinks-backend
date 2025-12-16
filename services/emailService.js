@@ -776,10 +776,8 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
         @media only screen and (max-width: 600px) {
           .content { padding: 30px 25px; }
           .header { padding: 25px 20px; }
-          .header h1 { font-size: 24px; }
-          .header p { font-size: 14px; }
+              .header p { font-size: 14px; }
           .logo-img { max-width: 160px; }
-          .invoice-icon { font-size: 40px; margin-bottom: 8px; }
           .invoice-header { flex-direction: column; gap: 20px; }
           .invoice-info.right { text-align: left; }
         }
@@ -793,9 +791,7 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
               <div class="logo-container">
                 <img src="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/logo.PNG" alt="ClickaLinks Logo" class="logo-img" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
               </div>
-              <div class="invoice-icon">📄</div>
-              <h1>Your Invoice</h1>
-              <p>Invoice #${invoiceNumber}</p>
+              <p style="margin-top: 15px; font-size: 16px; opacity: 0.95;">Invoice #${invoiceNumber}</p>
             </div>
           </div>
           <div class="content">
@@ -1366,19 +1362,6 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
       flex-direction: column;
       gap: 5px;
     }
-    .invoice-header h1 {
-      font-size: 28px;
-      margin: 0;
-      font-weight: 700;
-      color: white;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-    }
-    .invoice-header .tagline {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.9);
-      margin-top: 2px;
-    }
     .invoice-header-right {
       text-align: right;
       min-width: 180px;
@@ -1409,12 +1392,10 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
       .logo-img {
         max-width: 150px;
       }
-      .invoice-header h1 {
-        font-size: 24px;
-      }
       .invoice-header-right {
         width: 100%;
         text-align: center;
+        margin-top: 15px;
       }
     }
     .invoice-body {
@@ -1815,20 +1796,8 @@ export async function sendAdConfirmationEmail(purchaseData) {
 
   console.log('✅ Invoice email sent successfully');
 
-  // Send admin notification
-  try {
-    console.log('📧 Sending admin notification email...');
-    await sendAdminNotificationEmail('purchase', {
-      ...purchaseData,
-      originalAmount: originalAmt,
-      discountAmount: discountAmt,
-      finalAmount: totalAmount
-    });
-    console.log('✅ Admin notification sent successfully');
-  } catch (adminError) {
-    console.error('⚠️ Failed to send admin notification:', adminError.message);
-    // Don't fail the whole process if admin notification fails
-  }
+  // Admin notification is sent from server.js to avoid duplicates
+  // Removed duplicate call here
 
   // Both emails sent successfully
   return {

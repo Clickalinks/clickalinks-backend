@@ -441,20 +441,8 @@ app.post('/api/sync-purchase', async (req, res) => {
         console.warn('⚠️ Email send failed (non-blocking):', err.message);
       });
       
-      // Send admin notification email (non-blocking but with better error handling)
-      console.log('📧 Attempting to send admin notification email from sync-purchase...');
-      sendAdminNotificationEmail('purchase', purchaseData)
-        .then(adminResult => {
-          if (adminResult.success) {
-            console.log('✅ Admin notification email sent successfully from sync-purchase:', adminResult.messageId);
-          } else {
-            console.error('❌ Admin notification email failed from sync-purchase:', adminResult.message || adminResult.error);
-          }
-        })
-        .catch(err => {
-          console.error('❌ Admin notification email error from sync-purchase:', err.message);
-          console.error('❌ Admin notification error stack:', err.stack);
-        });
+      // Admin notification is sent from /api/send-confirmation-email endpoint to avoid duplicates
+      // Removed duplicate call here
     }
     
     res.json({
