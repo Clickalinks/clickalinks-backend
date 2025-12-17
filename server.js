@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 import FormData from 'form-data';
 // Initialize Firebase Admin first (before importing services that depend on it)
 import './config/firebaseAdmin.js';
-import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML, sendContactFormEmail } from './services/emailService.js';
+import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
@@ -170,7 +170,6 @@ app.get('/', (req, res) => {
       checkSession: '/api/check-session/:id',
       purchasedSquares: '/api/purchased-squares',
       sendConfirmationEmail: '/api/send-confirmation-email',
-      contact: '/api/contact',
     }
   });
 });
@@ -737,59 +736,6 @@ app.get('/api/invoice/download', async (req, res) => {
   }
 });
 
-// Contact form endpoint
-app.post('/api/contact', 
-  generalRateLimit,
-  async (req, res) => {
-    try {
-      const { name, email, subject, message } = req.body;
-
-      // Validate required fields
-      if (!name || !email || !subject || !message) {
-        return res.status(400).json({
-          success: false,
-          error: 'All fields are required'
-        });
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid email address'
-        });
-      }
-
-      console.log('📧 Contact form submission received:', {
-        name: name.substring(0, 20) + '...',
-        email: email,
-        subject: subject.substring(0, 30) + '...'
-      });
-
-      // Send email to support team
-      const result = await sendContactFormEmail({ name, email, subject, message });
-
-      if (result.success) {
-        res.json({
-          success: true,
-          message: 'Your message has been sent successfully! We will get back to you soon.'
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: result.error || 'Failed to send message. Please try again later.'
-        });
-      }
-    } catch (error) {
-      console.error('❌ Contact form error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'An error occurred while sending your message. Please try again later.'
-      });
-    }
-  }
-);
 
 
 // ============================================
@@ -884,7 +830,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Virus scan endpoint available at: POST /api/scan-file`);
   console.log(`✅ Email confirmation endpoint available at: POST /api/send-confirmation-email`);
-  console.log(`✅ Contact form endpoint available at: POST /api/contact`);
   console.log(`✅ Promo code validation available at: POST /api/promo-code/validate`);
   console.log(`✅ Promo code bulk create available at: POST /api/promo-code/bulk-create`);
   console.log(`✅ Shuffle endpoint available at: POST /admin/shuffle`);
