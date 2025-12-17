@@ -1614,118 +1614,6 @@ Submitted: ${new Date().toLocaleString('en-GB')}
     const mailOptions = {
       from: fromEmail,
       to: supportEmail,
-      replyTo: email, // Allow support team to reply directly to the sender
-      subject: `Contact Form: ${subject}`,
-      text: textContent,
-      html: htmlContent
-    };
-
-    console.log('📧 Sending contact form email...');
-    console.log('📧 From:', email);
-    console.log('📧 To:', supportEmail);
-    console.log('📧 Subject:', subject);
-    
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Contact form email sent successfully!');
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('❌ ERROR SENDING CONTACT FORM EMAIL:', error.message);
-    return { success: false, error: error.message, code: error.code };
-  }
-}
-
-/**
- * Send contact form email to support team
- */
-export async function sendContactFormEmail(contactData) {
-  const transporter = createTransporter();
-  
-  if (!transporter) {
-    console.error('❌ Email service not configured - cannot send contact form email');
-    return { success: false, message: 'Email service not configured' };
-  }
-
-  const { name, email, subject, message } = contactData;
-
-  if (!name || !email || !subject || !message) {
-    return { success: false, message: 'All fields are required' };
-  }
-
-  const supportEmail = process.env.SUPPORT_EMAIL || 'support@clickalinks.com';
-
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9f9f9; padding: 25px; border-radius: 0 0 10px 10px; }
-        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }
-        .info-row { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .info-row:last-child { border-bottom: none; }
-        .label { font-weight: bold; color: #666; display: inline-block; width: 120px; }
-        .value { color: #333; }
-        .message-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #e2e8f0; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>📧 New Contact Form Submission</h1>
-          <p>Someone has sent a message through the contact form</p>
-        </div>
-        <div class="content">
-          <div class="info-box">
-            <h3 style="margin-top: 0;">Contact Details</h3>
-            <div class="info-row">
-              <span class="label">Name:</span>
-              <span class="value">${name}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Email:</span>
-              <span class="value"><a href="mailto:${email}">${email}</a></span>
-            </div>
-            <div class="info-row">
-              <span class="label">Subject:</span>
-              <span class="value">${subject}</span>
-            </div>
-            <div class="message-box">
-              <strong>Message:</strong>
-              <p style="margin-top: 10px; white-space: pre-wrap;">${message}</p>
-            </div>
-            <div class="info-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
-              <span>Submitted: ${new Date().toLocaleString('en-GB')}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  const textContent = `
-New Contact Form Submission
-
-Contact Details:
-- Name: ${name}
-- Email: ${email}
-- Subject: ${subject}
-
-Message:
-${message}
-
-Submitted: ${new Date().toLocaleString('en-GB')}
-  `;
-
-  try {
-    const fromEmail = process.env.EMAIL_FROM || `"ClickaLinks Contact Form" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`;
-    
-    const mailOptions = {
-      from: fromEmail,
-      to: supportEmail,
       replyTo: email,
       subject: `Contact Form: ${subject}`,
       text: textContent,
@@ -1797,3 +1685,5 @@ export async function testEmailConnection() {
     };
   }
 }
+
+// All functions are already exported individually above

@@ -476,8 +476,8 @@ app.post('/api/send-confirmation-email', async (req, res) => {
       promoCode: purchaseData.promoCode
     });
     
-    // Send admin notification email (non-blocking but with comprehensive error handling)
-    sendAdminNotificationEmail('purchase', purchaseData)
+    // FIXED: Call with only purchaseData parameter
+    sendAdminNotificationEmail(purchaseData)
       .then(adminResult => {
         if (adminResult.success) {
           console.log('✅ Admin notification email sent successfully:', adminResult.messageId);
