@@ -48,14 +48,8 @@ console.log('✅ Request timeout configured (30 seconds)');
 app.use(generalRateLimit);
 console.log('✅ General rate limiting configured (100 req/15min)');
 
-// 🔍 DEBUG: Check what key is being loaded (sanitized)
+// Check Stripe configuration
 const isDevelopment = process.env.NODE_ENV !== 'production';
-if (isDevelopment) {
-  console.log('🔑 Environment check:');
-  console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
-  console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
-  console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
-}
 
 // Initialize Stripe - handle missing key gracefully
 let stripe;
@@ -162,23 +156,7 @@ console.log('✅ Promo code routes registered at /api/promo-code');
 app.use('/api/admin', adminRoutes);
 console.log('✅ Admin authentication routes registered at /api/admin');
 
-// Log all registered routes for debugging
-app.use((req, res, next) => {
-  console.log(`📡 Request: ${req.method} ${req.path}`);
-  next();
-});
 
-// Test CORS endpoint - for debugging
-app.get('/api/test-cors', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS test endpoint',
-    headers: {
-      origin: req.headers.origin,
-      'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
-    }
-  });
-});
 
 // Root route
 app.get('/', (req, res) => {
@@ -188,8 +166,6 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/health',
-      testCors: '/api/test-cors',
-      testStripe: '/api/test-stripe',
       createCheckout: '/api/create-checkout-session',
       checkSession: '/api/check-session/:id',
       purchasedSquares: '/api/purchased-squares',
@@ -208,55 +184,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// SECURITY: Debug endpoints only available in development
-// Test Stripe key endpoint (DEVELOPMENT ONLY)
-if (isDevelopment) {
-  app.get('/api/test-stripe', async (req, res) => {
-    try {
-      console.log('🔑 Testing Stripe key...');
-      
-      if (!stripe) {
-        return res.status(500).json({
-          success: false,
-          error: 'Stripe not configured'
-        });
-      }
-      
-      // Try to make a simple Stripe API call
-      const balance = await stripe.balance.retrieve();
-      
-      res.json({
-        success: true,
-        message: 'Stripe key is VALID! 🎉',
-        keyInfo: {
-          exists: !!process.env.STRIPE_SECRET_KEY,
-          startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
-          length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
-        },
-        balance: {
-          available: balance.available[0]?.amount || 0,
-          currency: balance.available[0]?.currency || 'gbp'
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Stripe key test failed:', error.message);
-      
-      res.status(500).json({
-        success: false,
-        error: sanitizeError(error, isDevelopment),
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-  console.log('⚠️ Debug endpoint /api/test-stripe enabled (DEVELOPMENT ONLY)');
-} else {
-  // In production, return 404 for debug endpoints
-  app.get('/api/test-stripe', (req, res) => {
-    res.status(404).json({ success: false, error: 'Not found' });
-  });
-}
 
 // Create Stripe checkout session
 // SECURITY: Apply payment-specific rate limiting and input validation
@@ -603,35 +530,6 @@ app.post('/api/send-confirmation-email', async (req, res) => {
   }
 });
 
-// SECURITY: Debug endpoint only available in development
-// Debug endpoint to track purchase flow (DEVELOPMENT ONLY)
-if (isDevelopment) {
-  app.post('/api/debug-purchase', async (req, res) => {
-    try {
-      const { sessionId, squareNumber, step, data } = req.body;
-      // SECURITY: Sanitize log data
-      const sanitizedData = sanitizeLogData({
-        sessionId,
-        squareNumber, 
-        step,
-        timestamp: new Date().toISOString(),
-        data: data ? `Has logo: ${!!data.logoData}` : 'No data'
-      });
-      console.log('🔍 PURCHASE DEBUG:', sanitizedData);
-      
-      res.json({ success: true, logged: true });
-    } catch (error) {
-      console.error('Debug error:', error);
-      res.status(500).json({ success: false, error: sanitizeError(error, isDevelopment) });
-    }
-  });
-  console.log('⚠️ Debug endpoint /api/debug-purchase enabled (DEVELOPMENT ONLY)');
-} else {
-  // In production, return 404 for debug endpoints
-  app.post('/api/debug-purchase', (req, res) => {
-    res.status(404).json({ success: false, error: 'Not found' });
-  });
-}
 
 // Virus scanning endpoint using VirusTotal API
 // Requires VIRUSTOTAL_API_KEY in environment variables
@@ -893,63 +791,6 @@ app.post('/api/contact',
   }
 );
 
-// Test admin email endpoint (for debugging email issues)
-app.post('/api/test-admin-email', async (req, res) => {
-  try {
-    console.log('📧 Test admin email endpoint called');
-    
-    const testData = {
-      businessName: req.body.businessName || 'Test Business',
-      contactEmail: req.body.contactEmail || 'test@example.com',
-      squareNumber: req.body.squareNumber || 1,
-      pageNumber: req.body.pageNumber || 1,
-      selectedDuration: req.body.selectedDuration || 30,
-      originalAmount: req.body.originalAmount || 10,
-      discountAmount: req.body.discountAmount || 0,
-      finalAmount: req.body.finalAmount || 10,
-      transactionId: req.body.transactionId || 'TEST-' + Date.now(),
-      promoCode: req.body.promoCode || null
-    };
-    
-    console.log('📧 Test admin email data:', testData);
-    
-    const result = await sendAdminNotificationEmail('purchase', testData);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        message: 'Test admin email sent successfully',
-        messageId: result.messageId,
-        sentTo: process.env.ADMIN_NOTIFICATION_EMAIL || 
-                process.env['ADMIN-NOTIFICATION-EMAIL'] || 
-                'ads@clickalinks.com'
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: result.error || result.message,
-        code: result.code,
-        message: 'Failed to send test admin email',
-        troubleshooting: {
-          smtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
-          sendgridConfigured: !!process.env.SENDGRID_API_KEY,
-          adminEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 
-                      process.env['ADMIN-NOTIFICATION-EMAIL'] || 
-                      'ads@clickalinks.com',
-          smtpHost: process.env.SMTP_HOST || 'Not set',
-          smtpUser: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 10) + '...' : 'Not set'
-        }
-      });
-    }
-  } catch (error) {
-    console.error('❌ Test admin email error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: 'Failed to send test admin email'
-    });
-  }
-});
 
 // ============================================
 // AUTO-SHUFFLE SCHEDULER
@@ -1042,10 +883,8 @@ function initializeAutoShuffle() {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Virus scan endpoint available at: POST /api/scan-file`);
-  console.log(`✅ Debug endpoint available at: POST /api/debug-purchase`);
   console.log(`✅ Email confirmation endpoint available at: POST /api/send-confirmation-email`);
   console.log(`✅ Contact form endpoint available at: POST /api/contact`);
-  console.log(`✅ Test admin email endpoint available at: POST /api/test-admin-email`);
   console.log(`✅ Promo code validation available at: POST /api/promo-code/validate`);
   console.log(`✅ Promo code bulk create available at: POST /api/promo-code/bulk-create`);
   console.log(`✅ Shuffle endpoint available at: POST /admin/shuffle`);
