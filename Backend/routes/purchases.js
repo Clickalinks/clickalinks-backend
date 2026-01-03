@@ -12,6 +12,10 @@ const db = admin.firestore();
  * POST /api/purchases
  * Save a purchase to Firestore via backend API
  * Replaces direct client-side Firestore writes for security
+ * 
+ * SECURITY: This endpoint allows anyone to create purchases (they're paying for them).
+ * Ownership is established at creation time via the contactEmail field.
+ * Users can only modify their own purchases via PUT /api/purchases/:purchaseId (requires ownership verification).
  */
 router.post('/purchases',
   generalRateLimit,
