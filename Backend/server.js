@@ -10,11 +10,6 @@ import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
 
-// Verify admin routes loaded correctly
-console.log('🔍 Admin routes import check:');
-console.log('  - Type:', typeof adminRoutes);
-console.log('  - Is router:', adminRoutes && typeof adminRoutes.stack !== 'undefined');
-console.log('  - Stack length:', adminRoutes?.stack?.length || 'N/A');
 import { performGlobalShuffle } from './services/shuffleService.js';
 import {
   securityHeaders,
@@ -33,9 +28,6 @@ dotenv.config();
 
 console.log('🔄 Starting server initialization...');
 console.log('🔑 ADMIN_API_KEY check:', process.env.ADMIN_API_KEY ? `SET (${process.env.ADMIN_API_KEY.substring(0, 10)}...)` : 'NOT SET');
-console.log('🔍 Checking ADMIN_PASSWORD_HASH...');
-console.log('🔍 ADMIN_PASSWORD_HASH exists?', !!process.env.ADMIN_PASSWORD_HASH);
-console.log('🔍 ADMIN_PASSWORD_HASH length:', process.env.ADMIN_PASSWORD_HASH?.length || 0);
 
 // CRITICAL: Check for ADMIN_PASSWORD_HASH (required, no plain text fallback)
 if (!process.env.ADMIN_PASSWORD_HASH) {
@@ -179,12 +171,6 @@ console.log('✅ CORS configured: Manual handling (no cors() middleware)');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 console.log('✅ Body size limit configured (1MB default)');
-
-// DEBUG: Log ALL incoming requests
-app.use((req, res, next) => {
-  console.log(`📡 Incoming request: ${req.method} ${req.originalUrl} (path: ${req.path})`);
-  next();
-});
 
 // Shuffle admin routes
 app.use('/', shuffleRoutes);
@@ -1027,26 +1013,10 @@ function initializeAutoShuffle() {
 
 // 404 handler - catch all unmatched routes (must be LAST, after all routes)
 app.use('*', (req, res) => {
-  console.log('❌❌❌ 404 Handler - Unmatched route (catch-all):');
-  console.log('  - Method:', req.method);
-  console.log('  - Path:', req.path);
-  console.log('  - Original URL:', req.originalUrl);
-  console.log('  - Base URL:', req.baseUrl);
-  console.log('  - Route:', req.route);
-  
   res.status(404).json({
     error: 'Route not found',
     method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    message: 'This is the custom 404 handler. If you see this, routes are not matching.',
-    availableRoutes: {
-      root: 'GET /',
-      health: 'GET /health',
-      adminTest: 'GET /api/admin/test-direct',
-      adminVerify: 'GET /api/admin/verify',
-      adminMfaSetup: 'GET /api/admin/mfa/setup'
-    }
+    path: req.path
   });
 });
 
