@@ -11,22 +11,31 @@ console.log('🔐 Generating MFA Secret for Admin');
 console.log('========================================\n');
 
 // Generate new MFA secret
+// Use 32 bytes which gives us a proper base32 secret
 const secret = speakeasy.generateSecret({
   name: 'ClickALinks Admin',
-  length: 32
+  length: 32,
+  issuer: 'ClickALinks'
 });
 
 console.log('✅ MFA Secret Generated!\n');
 console.log('Secret:', secret.base32);
-console.log('\n========================================');
+console.log('\n⚠️ IMPORTANT: Use the QR code image below (recommended)');
+console.log('   OR if manual entry, ensure no spaces/extra characters\n');
+console.log('========================================');
 console.log('📋 Next Steps:');
 console.log('========================================\n');
-console.log('1. Copy the secret above');
-console.log('2. Set up your authenticator app:');
-console.log('   - App: Google Authenticator, Authy, or similar');
-console.log('   - Account Name: ClickALinks Admin');
-console.log('   - Secret: (paste the secret above)');
-console.log('   - Type: Time-based (TOTP)');
+console.log('OPTION 1 (RECOMMENDED): Use QR Code');
+console.log('   1. Open the mfa-qr-code.png file that was created');
+console.log('   2. Scan it with your authenticator app');
+console.log('   3. That\'s it!\n');
+console.log('OPTION 2: Manual Entry');
+console.log('   1. App: Google Authenticator, Authy, or similar');
+console.log('   2. Choose "Manual Entry" or "Enter Setup Key"');
+console.log('   3. Account Name: ClickALinks Admin');
+console.log('   4. Secret: ' + secret.base32);
+console.log('   5. Type: Time-based (TOTP)');
+console.log('   6. ⚠️ Make sure there are NO spaces in the secret\n');
 console.log('\n3. In Render Dashboard → Environment, add:');
 console.log('   - ADMIN_MFA_SECRET = (paste secret)');
 console.log('   - ADMIN_MFA_ENABLED = true');
@@ -35,12 +44,19 @@ console.log('========================================\n');
 
 // Generate QR code
 try {
+  // Make sure we're using the base32 property
+  if (!secret.base32) {
+    throw new Error('Secret does not have base32 property. Secret object: ' + JSON.stringify(secret, null, 2));
+  }
+  
   const otpauthUrl = speakeasy.otpauthURL({
     secret: secret.base32,
     encoding: 'base32',
     label: 'ClickALinks Admin',
     issuer: 'ClickALinks'
   });
+  
+  console.log('OTP Auth URL:', otpauthUrl);
   
   const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
   
