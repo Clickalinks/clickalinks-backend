@@ -1019,6 +1019,30 @@ function initializeAutoShuffle() {
   }, timeUntilNext);
 }
 
+// 404 handler - catch all unmatched routes (must be LAST, after all routes)
+app.use((req, res, next) => {
+  console.log('❌ 404 Handler - Unmatched route:');
+  console.log('  - Method:', req.method);
+  console.log('  - Path:', req.path);
+  console.log('  - Original URL:', req.originalUrl);
+  console.log('  - Base URL:', req.baseUrl);
+  console.log('  - Route:', req.route);
+  
+  res.status(404).json({
+    error: 'Route not found',
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    availableRoutes: {
+      root: 'GET /',
+      health: 'GET /health',
+      adminTest: 'GET /api/admin/test-direct',
+      adminVerify: 'GET /api/admin/verify',
+      adminMfaSetup: 'GET /api/admin/mfa/setup'
+    }
+  });
+});
+
 // Start server AFTER all routes are defined
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
