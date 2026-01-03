@@ -309,10 +309,12 @@ router.get('/mfa/setup',
   adminRateLimit,
   async (req, res) => {
     try {
+      console.log('🔐 MFA setup endpoint called');
       // This endpoint should be protected, but for initial setup, we'll allow it
       // In production, you might want to add additional verification
 
       if (ADMIN_MFA_SECRET) {
+        console.log('ℹ️ MFA secret already configured, returning existing setup');
         // MFA already configured - return existing setup info
         const otpauthUrl = speakeasy.otpauthURL({
           secret: ADMIN_MFA_SECRET,
@@ -342,26 +344,52 @@ router.get('/mfa/setup',
       }
 
       // Generate new MFA secret
-      const secret = speakeasy.generateSecret({
-        name: 'ClickALinks Admin',
-        length: 32
-      });
+      console.log('🔄 Generating new MFA secret...');
+      let secret;
+      try {
+        secret = speakeasy.generateSecret({
+          name: 'ClickALinks Admin',
+          length: 32
+        });
+        console.log('✅ MFA secret generated');
+      } catch (secretError) {
+        console.error('❌ Error generating MFA secret:', secretError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to generate MFA secret',
+          details: secretError.message
+        });
+      }
 
-      const otpauthUrl = speakeasy.otpauthURL({
-        secret: secret.base32,
-        encoding: 'base32',
-        label: 'ClickALinks Admin',
-        issuer: 'ClickALinks'
-      });
+      let otpauthUrl;
+      try {
+        otpauthUrl = speakeasy.otpauthURL({
+          secret: secret.base32,
+          encoding: 'base32',
+          label: 'ClickALinks Admin',
+          issuer: 'ClickALinks'
+        });
+        console.log('✅ OTP auth URL generated');
+      } catch (urlError) {
+        console.error('❌ Error generating OTP auth URL:', urlError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to generate OTP auth URL',
+          details: urlError.message
+        });
+      }
 
       let qrCodeDataUrl;
       try {
+        console.log('🔄 Generating QR code...');
         qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+        console.log('✅ QR code generated');
       } catch (qrError) {
         console.error('❌ Error generating QR code:', qrError);
         return res.status(500).json({
           success: false,
-          error: 'Failed to generate QR code'
+          error: 'Failed to generate QR code',
+          details: qrError.message
         });
       }
 
@@ -382,9 +410,12 @@ router.get('/mfa/setup',
 
     } catch (error) {
       console.error('❌ MFA setup error:', error);
+      console.error('❌ Error stack:', error.stack);
       res.status(500).json({
         success: false,
-        error: 'Failed to generate MFA secret'
+        error: 'Failed to generate MFA secret',
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   }
