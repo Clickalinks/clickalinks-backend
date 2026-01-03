@@ -1756,3 +1756,49 @@ export async function sendAdConfirmationEmail(purchaseData) {
     invoiceNumber: invoiceNumber
   };
 }
+
+/**
+ * Send contact form email to admin/support
+ */
+export async function sendContactFormEmail({ name, email, subject, message }) {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    console.error('❌ Email service not configured - cannot send contact form email');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.EMAIL_FROM || 'support@clickalinks.com';
+  const emailFrom = process.env.EMAIL_FROM || 'noreply@clickalinks.com';
+
+  try {
+    const mailOptions = {
+      from: emailFrom,
+      to: adminEmail,
+      replyTo: email,
+      subject: `Contact Form: ${subject}`,
+      html: `
+        <h2>New Contact Form Submission</h2>
+        <p><strong>From:</strong> ${name} (${email})</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <hr>
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Contact form email sent:', info.messageId);
+    
+    return {
+      success: true,
+      messageId: info.messageId
+    };
+  } catch (error) {
+    console.error('❌ Error sending contact form email:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send email'
+    };
+  }
+}
