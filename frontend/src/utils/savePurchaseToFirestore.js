@@ -41,6 +41,19 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       console.error('❌ Cannot save: squareNumber is missing');
       return false;
     }
+    
+    // Ensure businessName exists (use fallback if missing)
+    if (!purchaseData.businessName) {
+      purchaseData.businessName = `Business ${purchaseData.squareNumber}`;
+      console.warn('⚠️ Using fallback businessName for purchase');
+    }
+    
+    // Ensure contactEmail exists (required by backend)
+    if (!purchaseData.contactEmail || !purchaseData.contactEmail.trim()) {
+      console.error('❌ Cannot save: contactEmail is missing (required for emails)');
+      // Don't return false - still try to save, but log warning
+      console.warn('⚠️ Attempting to save without contactEmail - emails will not be sent');
+    }
 
     // SECURITY: Use backend API instead of direct Firestore writes
     // Backend uses Admin SDK which bypasses security rules

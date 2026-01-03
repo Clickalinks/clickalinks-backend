@@ -248,10 +248,45 @@ const Success = () => {
         }
       }
 
-      if (purchaseData.squareNumber && purchaseData.businessName) {
-        console.log('✅ Purchase data reconstructed successfully:', {
+      // ✅ CRITICAL: Try to save purchase even with partial data
+      // At minimum, we need squareNumber and transactionId (sessionId) to save
+      // If businessName is missing, we can use a placeholder and get it from Stripe metadata
+      const hasMinimumData = purchaseData.squareNumber && (purchaseData.transactionId || sessionId);
+      
+      if (hasMinimumData) {
+        // If businessName is missing, try to get it from Stripe metadata one more time
+        if (!purchaseData.businessName && sessionId) {
+          try {
+            const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
+            const sessionResponse = await fetch(`${BACKEND_URL}/api/check-session/${sessionId}`);
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              if (sessionData.success && sessionData.session?.metadata?.businessName) {
+                purchaseData.businessName = sessionData.session.metadata.businessName;
+                console.log('✅ Got businessName from Stripe metadata:', purchaseData.businessName);
+              }
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not fetch businessName from Stripe:', error);
+          }
+        }
+        
+        // Use fallback businessName if still missing
+        if (!purchaseData.businessName) {
+          purchaseData.businessName = `Business ${purchaseData.squareNumber}`;
+          console.warn('⚠️ Using fallback businessName, admin can update later');
+        }
+        
+        // Ensure we have transactionId
+        if (!purchaseData.transactionId && sessionId) {
+          purchaseData.transactionId = sessionId;
+        }
+        
+        console.log('✅ Purchase data ready to save:', {
           squareNumber: purchaseData.squareNumber,
           businessName: purchaseData.businessName,
+          transactionId: purchaseData.transactionId,
           hasLogo: !!purchaseData.logoData,
           logoType: purchaseData.logoData ? (purchaseData.logoData.startsWith('http') ? 'URL' : 'Data URL') : 'NONE'
         });
@@ -259,6 +294,7 @@ const Success = () => {
         
         // Save purchase (with timeout to prevent hanging)
         try {
+          console.log('💾 Attempting to save purchase to Firestore...');
           const savePromise = savePurchaseToStorage(purchaseData);
           const timeoutPromise = new Promise((resolve) => setTimeout(() => {
             console.warn('⚠️ Save purchase timeout, continuing anyway...');
@@ -266,6 +302,7 @@ const Success = () => {
           }, 8000)); // 8 second timeout
           
           await Promise.race([savePromise, timeoutPromise]);
+          console.log('✅ Purchase save completed (or timed out)');
         } catch (saveError) {
           console.error('❌ Error saving purchase (non-blocking):', saveError);
           // Continue anyway - show success page
