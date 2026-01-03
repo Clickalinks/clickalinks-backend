@@ -254,21 +254,32 @@ const Success = () => {
       const hasMinimumData = purchaseData.squareNumber && (purchaseData.transactionId || sessionId);
       
       if (hasMinimumData) {
-        // If businessName is missing, try to get it from Stripe metadata one more time
-        if (!purchaseData.businessName && sessionId) {
+        // If businessName or contactEmail is missing, try to get it from Stripe metadata one more time
+        if ((!purchaseData.businessName || !purchaseData.contactEmail) && sessionId) {
           try {
             const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
             const sessionResponse = await fetch(`${BACKEND_URL}/api/check-session/${sessionId}`);
             
             if (sessionResponse.ok) {
               const sessionData = await sessionResponse.json();
-              if (sessionData.success && sessionData.session?.metadata?.businessName) {
-                purchaseData.businessName = sessionData.session.metadata.businessName;
-                console.log('✅ Got businessName from Stripe metadata:', purchaseData.businessName);
+              if (sessionData.success && sessionData.session) {
+                // Get businessName from metadata
+                if (!purchaseData.businessName && sessionData.session.metadata?.businessName) {
+                  purchaseData.businessName = sessionData.session.metadata.businessName;
+                  console.log('✅ Got businessName from Stripe metadata:', purchaseData.businessName);
+                }
+                
+                // Get contactEmail from Stripe session (customer_email) or metadata
+                if (!purchaseData.contactEmail) {
+                  purchaseData.contactEmail = sessionData.session.customer_email || sessionData.session.metadata?.contactEmail;
+                  if (purchaseData.contactEmail) {
+                    console.log('✅ Got contactEmail from Stripe session:', purchaseData.contactEmail);
+                  }
+                }
               }
             }
           } catch (error) {
-            console.warn('⚠️ Could not fetch businessName from Stripe:', error);
+            console.warn('⚠️ Could not fetch data from Stripe:', error);
           }
         }
         
@@ -281,6 +292,16 @@ const Success = () => {
         // Ensure we have transactionId
         if (!purchaseData.transactionId && sessionId) {
           purchaseData.transactionId = sessionId;
+        }
+        
+        // CRITICAL: contactEmail is required for emails - log warning if missing
+        if (!purchaseData.contactEmail) {
+          console.error('❌ CRITICAL: contactEmail is missing - emails cannot be sent!');
+          console.error('Purchase data:', {
+            squareNumber: purchaseData.squareNumber,
+            businessName: purchaseData.businessName,
+            transactionId: purchaseData.transactionId
+          });
         }
         
         console.log('✅ Purchase data ready to save:', {
@@ -338,13 +359,15 @@ const Success = () => {
                   // Reconstruct from Stripe metadata and businessFormData
                   // Try to get businessName from metadata first, then businessFormData
                   const businessNameFromMetadata = metadata.businessName || businessFormData.businessName || businessFormData.name;
+                  // Get contactEmail from Stripe session (customer_email) or metadata
+                  const contactEmailFromStripe = sessionData.session.customer_email || metadata.contactEmail || businessFormData.email || businessFormData.contactEmail;
                   
-                  if (metadata.squareNumber && (businessNameFromMetadata || businessFormData.businessName || businessFormData.name)) {
+                  if (metadata.squareNumber && contactEmailFromStripe) {
                     purchaseData = {
                       squareNumber: parseInt(metadata.squareNumber),
                       pageNumber: parseInt(metadata.pageNumber) || 1,
-                      businessName: businessNameFromMetadata,
-                      contactEmail: metadata.contactEmail || businessFormData.email || businessFormData.contactEmail,
+                      businessName: businessNameFromMetadata || `Business ${metadata.squareNumber}`,
+                      contactEmail: contactEmailFromStripe,
                       website: metadata.website || businessFormData.website || '',
                       finalAmount: (sessionData.session.amount_total / 100) || 0,
                       originalAmount: (sessionData.session.amount_total / 100) || 0,
@@ -359,12 +382,15 @@ const Success = () => {
                     console.log('✅ Successfully reconstructed from Stripe session metadata:', {
                       squareNumber: purchaseData.squareNumber,
                       businessName: purchaseData.businessName,
+                      contactEmail: purchaseData.contactEmail ? 'PRESENT' : 'MISSING',
                       hasLogo: !!purchaseData.logoData
                     });
                   } else {
-                    console.warn('⚠️ Stripe metadata missing squareNumber or businessName:', {
+                    console.warn('⚠️ Stripe metadata missing required fields:', {
                       squareNumber: metadata.squareNumber,
                       businessName: businessNameFromMetadata,
+                      contactEmail: contactEmailFromStripe,
+                      customer_email: sessionData.session.customer_email,
                       businessFormData: !!businessFormData
                     });
                   }
