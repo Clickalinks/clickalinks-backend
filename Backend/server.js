@@ -180,6 +180,11 @@ app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
 
 // Admin authentication routes
+// Add test route directly to verify routing works
+app.get('/api/admin/test-direct', (req, res) => {
+  res.json({ success: true, message: 'Direct route works!', path: req.path });
+});
+
 app.use('/api/admin', (req, res, next) => {
   console.log(`🔍 Admin route hit: ${req.method} ${req.path} (original: ${req.originalUrl})`);
   next();
