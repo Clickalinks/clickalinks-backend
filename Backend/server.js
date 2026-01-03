@@ -9,6 +9,12 @@ import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTM
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
+
+// Verify admin routes loaded correctly
+console.log('🔍 Admin routes import check:');
+console.log('  - Type:', typeof adminRoutes);
+console.log('  - Is router:', adminRoutes && typeof adminRoutes.stack !== 'undefined');
+console.log('  - Stack length:', adminRoutes?.stack?.length || 'N/A');
 import { performGlobalShuffle } from './services/shuffleService.js';
 import {
   securityHeaders,
@@ -179,14 +185,20 @@ console.log('✅ Shuffle routes registered');
 app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
 
-// Admin authentication routes
-// Add test route directly to verify routing works
+// Admin authentication routes - MUST be before any catch-all routes
+console.log('🔍 Registering admin routes...');
+console.log('🔍 Admin routes stack:', adminRoutes?.stack?.length || 0);
+
+// Add test route directly to verify routing works (BEFORE the router)
 app.get('/api/admin/test-direct', (req, res) => {
-  res.json({ success: true, message: 'Direct route works!', path: req.path });
+  console.log('✅ Direct test route hit!');
+  res.json({ success: true, message: 'Direct route works!', path: req.path, url: req.url });
 });
 
+// Mount admin router
 app.use('/api/admin', (req, res, next) => {
-  console.log(`🔍 Admin route hit: ${req.method} ${req.path} (original: ${req.originalUrl})`);
+  console.log(`🔍 Admin middleware hit: ${req.method} ${req.path} (original: ${req.originalUrl})`);
+  console.log(`🔍 Admin middleware - baseUrl: ${req.baseUrl}, route: ${req.route}`);
   next();
 }, adminRoutes);
 console.log('✅ Admin authentication routes registered at /api/admin');
