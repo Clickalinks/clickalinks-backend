@@ -336,6 +336,29 @@ ${userEmail ? `- User Email: ${userEmail}\n` : ''}
 - Final Amount: £${(finalAmount || 0).toFixed(2)}
 - Applied Date: ${new Date().toLocaleString('en-GB')}
     `;
+  } else {
+    // Unknown type - don't send empty email
+    console.error('❌ Unknown email type:', type);
+    console.error('❌ Available types: "purchase", "promo_code"');
+    return {
+      success: false,
+      error: `Unknown email type: ${type}. Available types: "purchase", "promo_code"`,
+      message: 'Cannot send email with unknown type'
+    };
+  }
+
+  // Validate that email content was generated
+  if (!subject || !htmlContent || !textContent) {
+    console.error('❌ Email content is empty!');
+    console.error(`   Type: ${type}`);
+    console.error(`   Subject: "${subject}"`);
+    console.error(`   HTML Content length: ${htmlContent.length}`);
+    console.error(`   Text Content length: ${textContent.length}`);
+    return {
+      success: false,
+      error: 'Email content is empty. Cannot send email.',
+      message: 'Email content generation failed'
+    };
   }
 
   try {
