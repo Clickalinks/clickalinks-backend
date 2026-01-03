@@ -862,7 +862,8 @@ async function sendWelcomeEmail(purchaseData) {
     businessName,
     squareNumber,
     pageNumber = 1,
-    selectedDuration = 30,
+    duration, // Check duration first (from purchases route)
+    selectedDuration = duration || 30, // Fallback to duration or default to 30
     finalAmount = 0,
     transactionId
   } = purchaseData;
@@ -1686,7 +1687,8 @@ export async function sendAdConfirmationEmail(purchaseData) {
     businessName,
     squareNumber,
     pageNumber = 1,
-    selectedDuration = 30,
+    duration, // Check duration first (from purchases route)
+    selectedDuration = duration || 30, // Fallback to duration or default to 30
     finalAmount = 0,
     originalAmount = finalAmount,
     discountAmount = 0,
