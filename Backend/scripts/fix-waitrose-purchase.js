@@ -52,12 +52,21 @@ async function fixWaitrosePurchase() {
     
     console.log(`✅ Purchase updated with correct amount!`);
     
-    // Send emails if not already sent
-    if (!purchaseData.emailsSent) {
-      console.log(`\n📧 Sending emails...`);
+    // Reset emailsSent flag to allow retry (even if already sent, we'll retry)
+    console.log(`\n🔄 Resetting emailsSent flag to allow retry...`);
+    await purchaseDoc.ref.update({ 
+      emailsSent: false,
+      emailRetryAttempt: admin.firestore.FieldValue.increment(1) || 1
+    });
+    console.log(`✅ Flag reset!`);
+    
+    // Now send emails
+    console.log(`\n📧 Sending emails...`);
       
       // Send admin notification
-      await sendAdminNotificationEmail('purchase', {
+      let adminSuccess = false;
+      try {
+        const adminResult = await sendAdminNotificationEmail('purchase', {
         businessName: purchaseData.businessName,
         contactEmail: purchaseData.contactEmail,
         squareNumber: purchaseData.squareNumber,
@@ -70,11 +79,23 @@ async function fixWaitrosePurchase() {
         discountAmount: 0,
         selectedDuration: purchaseData.duration || 10,
         purchaseId: purchaseDoc.id
-      }).catch(err => console.error('❌ Admin email error:', err.message));
+      });
+        adminSuccess = adminResult && adminResult.success;
+        if (adminSuccess) {
+          console.log('✅ Admin notification email sent successfully');
+        } else {
+          console.error('❌ Admin notification email failed:', adminResult?.message || 'Unknown error');
+        }
+      } catch (err) {
+        console.error('❌ Admin notification email error:', err.message);
+        console.error('   Full error:', err);
+      }
       
       // Send customer emails
+      let customerSuccess = false;
       if (purchaseData.contactEmail) {
-        await sendAdConfirmationEmail({
+        try {
+          const customerResult = await sendAdConfirmationEmail({
           businessName: purchaseData.businessName,
           contactEmail: purchaseData.contactEmail,
           squareNumber: purchaseData.squareNumber,
@@ -86,15 +107,35 @@ async function fixWaitrosePurchase() {
           discountAmount: 0,
           transactionId: TRANSACTION_ID,
           website: purchaseData.website || purchaseData.dealLink || ''
-        }).catch(err => console.error('❌ Customer email error:', err.message));
+        });
+          customerSuccess = customerResult && customerResult.success;
+          if (customerSuccess) {
+            console.log('✅ Customer confirmation emails sent successfully');
+          } else {
+            console.error('❌ Customer confirmation emails failed:', customerResult?.message || 'Unknown error');
+          }
+        } catch (err) {
+          console.error('❌ Customer confirmation email error:', err.message);
+          console.error('   Full error:', err);
+        }
+      } else {
+        console.warn('⚠️ No contact email provided, skipping customer emails');
       }
       
-      // Mark emails as sent
-      await purchaseDoc.ref.update({ emailsSent: true });
-      console.log(`✅ Emails sent!`);
-    } else {
-      console.log(`\n✅ Emails were already sent for this purchase.`);
-    }
+      // Update flag based on results
+      if (adminSuccess || customerSuccess) {
+        await purchaseDoc.ref.update({ 
+          emailsSent: true,
+          emailStatus: {
+            adminSent: adminSuccess,
+            customerSent: customerSuccess,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          }
+        });
+        console.log(`\n✅ Email status saved:`, { adminSent: adminSuccess, customerSent: customerSuccess });
+      } else {
+        console.error(`\n❌ All emails failed - keeping emailsSent as false for retry`);
+      }
     
     console.log(`\n✅ All done! Purchase fixed and emails sent.`);
     console.log(`\n📋 Summary:`);
