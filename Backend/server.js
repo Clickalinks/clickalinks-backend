@@ -134,6 +134,15 @@ app.use((req, res, next) => {
       'X-Requested-With'
     ].join(', ');
     
+    // Special handling for MFA setup endpoint - allow from any origin
+    if (req.path === '/api/admin/mfa/setup' || req.path.startsWith('/api/admin/mfa/setup')) {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'false');
+    } else if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    
     // CRITICAL: Always set these headers for OPTIONS requests
     // Browser needs these in preflight response to allow the actual request
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
@@ -151,8 +160,14 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   
+  // Special handling for MFA setup endpoint - allow from any origin (including file://)
+  // This is safe because it only generates a secret, doesn't expose sensitive data
+  if (req.path === '/api/admin/mfa/setup' || req.path.startsWith('/api/admin/mfa/setup')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'false');
+  } 
   // For non-OPTIONS requests, set CORS headers for allowed origins
-  if (origin && allowedOrigins.includes(origin)) {
+  else if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }

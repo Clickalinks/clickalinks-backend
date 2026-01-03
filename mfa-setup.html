@@ -305,8 +305,70 @@
                 }
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
-                showStatus('error', `❌ Error: ${error.message}. Make sure your backend is running and accessible.`);
+                
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    showStatus('error', `❌ CORS Error: Cannot access from file://. Click the button below to get your MFA secret directly.`);
+                    showManualOption();
+                } else {
+                    showStatus('error', `❌ Error: ${error.message}. Make sure your backend is running and accessible.`);
+                }
             }
+        }
+        
+        function showManualOption() {
+            const container = document.querySelector('.container');
+            const manualDiv = document.createElement('div');
+            manualDiv.className = 'step';
+            manualDiv.style.marginTop = '20px';
+            manualDiv.innerHTML = `
+                <h3>Alternative: Get Secret Directly</h3>
+                <p>Due to browser security restrictions, you can't access the API from a local file. Instead:</p>
+                <ol style="margin-left: 20px; margin-top: 10px; color: #666;">
+                    <li>Click this button to open the API endpoint directly in a new tab</li>
+                    <li>Copy the <code>"secret"</code> value from the JSON response</li>
+                    <li>Paste it in the "Secret" field below (when you see the form)</li>
+                </ol>
+                <button class="btn-primary" onclick="window.open('${BACKEND_URL}/api/admin/mfa/setup', '_blank')" style="margin-top: 15px;">
+                    🔗 Open MFA Setup API in New Tab
+                </button>
+                <div style="margin-top: 20px;">
+                    <h4>Or enter secret manually:</h4>
+                    <input type="text" id="manualSecret" placeholder="Paste your secret here" style="width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;">
+                    <button class="copy-btn" onclick="useManualSecret()" style="margin-top: 10px;">Use This Secret</button>
+                </div>
+            `;
+            container.appendChild(manualDiv);
+        }
+        
+        function useManualSecret() {
+            const secret = document.getElementById('manualSecret').value.trim();
+            if (!secret) {
+                showStatus('error', 'Please enter a secret');
+                return;
+            }
+            
+            // Generate QR code from secret
+            const otpauthUrl = `otpauth://totp/ClickALinks%20Admin?secret=${secret}&issuer=ClickALinks`;
+            
+            // Use a QR code library or API - for simplicity, we'll use qrcode.js via CDN
+            // But for now, just show the secret and let them scan manually
+            
+            document.getElementById('secretDisplay').textContent = secret;
+            document.getElementById('secretShort').textContent = secret.substring(0, 20);
+            
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            
+            showStatus('info', '⚠️ Secret entered manually. Please scan the QR code using the secret below, or use manual entry in your authenticator app.');
+            
+            // Hide QR container since we can't generate it client-side easily
+            document.querySelector('.qr-container').innerHTML = `
+                <p style="color: #666;">Use manual entry in your authenticator app:</p>
+                <p style="margin-top: 10px;"><strong>Account:</strong> ClickALinks Admin</p>
+                <p><strong>Secret:</strong> <code style="background: #f4f4f4; padding: 5px 10px; border-radius: 4px;">${secret}</code></p>
+                <p style="margin-top: 10px; color: #666; font-size: 14px;">Enter this secret manually in your authenticator app</p>
+            `;
         }
         
         function copySecret() {
