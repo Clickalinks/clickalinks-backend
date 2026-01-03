@@ -55,6 +55,43 @@ async function saveEnvatoPurchase(sessionId) {
     console.log(`   Duration: ${duration} days`);
     console.log(`   Website: ${website}`);
     
+    // Try to find logo in Firebase Storage
+    let logoData = null;
+    let storagePath = null;
+    
+    try {
+      console.log(`\n🔍 Searching for logo in Firebase Storage...`);
+      const bucket = admin.storage().bucket();
+      const [files] = await bucket.getFiles({ prefix: 'logos/' });
+      
+      // Look for files matching this transaction or square number
+      const matchingFiles = files.filter(file => {
+        const fileName = file.name;
+        return fileName.includes(sessionId.substring(0, 20)) || 
+               fileName.includes(`square-${squareNumber}`) ||
+               fileName.includes(`purchase-`) && fileName.includes(`${squareNumber}`);
+      });
+      
+      if (matchingFiles.length > 0) {
+        console.log(`✅ Found ${matchingFiles.length} potential logo file(s)`);
+        // Use the most recent matching file
+        const logoFile = matchingFiles[matchingFiles.length - 1];
+        storagePath = logoFile.name;
+        
+        // Get download URL
+        const [url] = await logoFile.getSignedUrl({
+          action: 'read',
+          expires: '03-09-2491' // Far future date
+        });
+        logoData = url;
+        console.log(`   Using: ${storagePath}`);
+      } else {
+        console.log(`   No logo found in Storage`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Error searching for logo: ${error.message}`);
+    }
+    
     // Check if purchase already exists
     const existingQuery = await db.collection('purchasedSquares')
       .where('transactionId', '==', sessionId)
@@ -147,6 +184,8 @@ async function saveEnvatoPurchase(sessionId) {
       transactionId: sessionId,
       promoCode: null,
       promoId: null,
+      logoData: logoData,
+      storagePath: storagePath,
       emailsSent: false,
       startDate: admin.firestore.Timestamp.fromDate(startDate),
       endDate: admin.firestore.Timestamp.fromDate(endDate),
