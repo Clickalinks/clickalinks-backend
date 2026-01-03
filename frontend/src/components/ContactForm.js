@@ -16,15 +16,47 @@ const ContactForm = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage('');
     
-    const { name, email, subject, message } = formData;
-    const mailtoLink = `mailto:support@clickalinks.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`
-    )}`;
-    
-    window.location.href = mailtoLink;
+    try {
+      const { name, email, subject, message } = formData;
+      
+      const response = await fetch(`${BACKEND_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, subject, message })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitMessage('✅ Your message has been sent successfully! We will get back to you soon.');
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+      } else {
+        setSubmitMessage(`❌ Error: ${result.error || 'Failed to send message. Please try again later.'}`);
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
+      setSubmitMessage('❌ Error: Failed to send message. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -93,9 +125,14 @@ const ContactForm = () => {
                   ></textarea>
                 </div>
                 
-                <button type="submit" className="contact-submit-btn">
-                  📨 Send Message
+                <button type="submit" className="contact-submit-btn" disabled={isSubmitting}>
+                  {isSubmitting ? '⏳ Sending...' : '📨 Send Message'}
                 </button>
+                {submitMessage && (
+                  <div className={`submit-message ${submitMessage.startsWith('✅') ? 'success' : 'error'}`}>
+                    {submitMessage}
+                  </div>
+                )}
               </form>
             </div>
           </div>
