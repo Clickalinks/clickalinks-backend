@@ -26,6 +26,13 @@ const JWT_EXPIRES_IN = '24h'; // Token expires in 24 hours
 const ADMIN_MFA_SECRET = process.env.ADMIN_MFA_SECRET || '';
 const ADMIN_MFA_ENABLED = process.env.ADMIN_MFA_ENABLED === 'true' || false;
 
+// Debug logging for MFA configuration
+console.log('🔍 Admin routes - MFA configuration:');
+console.log('  - ADMIN_MFA_ENABLED env:', process.env.ADMIN_MFA_ENABLED);
+console.log('  - ADMIN_MFA_ENABLED parsed:', ADMIN_MFA_ENABLED);
+console.log('  - ADMIN_MFA_SECRET exists:', !!ADMIN_MFA_SECRET);
+console.log('  - ADMIN_MFA_SECRET length:', ADMIN_MFA_SECRET?.length || 0);
+
 // In-memory session store (in production, use Redis or database)
 const activeSessions = new Map();
 
@@ -123,6 +130,11 @@ router.post('/login',
       }
 
       // Password is valid - check if MFA is enabled
+      console.log('🔍 Login - Checking MFA:');
+      console.log('  - ADMIN_MFA_ENABLED:', ADMIN_MFA_ENABLED);
+      console.log('  - ADMIN_MFA_SECRET exists:', !!ADMIN_MFA_SECRET);
+      console.log('  - Both conditions met:', ADMIN_MFA_ENABLED && ADMIN_MFA_SECRET);
+      
       if (ADMIN_MFA_ENABLED && ADMIN_MFA_SECRET) {
         // Generate temporary MFA verification token (expires in 5 minutes)
         const mfaToken = jwt.sign(
