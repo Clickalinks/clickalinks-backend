@@ -20,6 +20,7 @@ const HowItWorks = lazy(() => import('./components/HowItWorks'));
 const Terms = lazy(() => import('./components/Terms'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const HelpCentre = lazy(() => import('./components/HelpCentre'));
+const Blog = lazy(() => import('./components/Blog'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
 // Loading fallback component
