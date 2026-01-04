@@ -3,8 +3,10 @@ import { body, validationResult } from 'express-validator';
 import admin from '../config/firebaseAdmin.js';
 import { generalRateLimit } from '../middleware/security.js';
 import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
+import { verifyAdminToken } from './admin.js';
 // Note: ClickaLinks does not have user accounts, so ownership verification is not needed.
 // Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email.
+// Admin-only endpoints for deleting/updating purchases are protected with verifyAdminToken middleware.
 
 const router = express.Router();
 const db = admin.firestore();
@@ -420,7 +422,7 @@ router.post('/track-click',
 // - PUT /api/purchases/:purchaseId (was: Update a purchase with ownership verification)  
 // - GET /api/purchases/user/:email (was: Get all purchases for a specific email)
 //
-// If admin functionality is needed in the future, these endpoints should be protected with verifyAdminToken middleware.
+// Admin-only endpoints for purchase management are defined below (protected with verifyAdminToken middleware).
 
 /**
  * PUT /api/purchases/:purchaseId
