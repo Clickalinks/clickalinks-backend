@@ -38,7 +38,7 @@ export const securityHeaders = helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http:"],
+      imgSrc: ["'self'", "data:", "https:"], // HTTPS only - no HTTP allowed
       connectSrc: ["'self'", "https://api.stripe.com", "https://www.virustotal.com"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -166,6 +166,31 @@ export const sanitizeError = (error, isDevelopment = false) => {
   
   // In development, show full error
   return error.message;
+};
+
+// HTTPS Enforcement Middleware
+// Redirects all HTTP requests to HTTPS (except health checks)
+export const enforceHttps = (req, res, next) => {
+  // Skip HTTPS enforcement for local development or health checks
+  if (process.env.NODE_ENV === 'development') {
+    return next();
+  }
+
+  // Check if request is already HTTPS
+  // When behind a proxy (like Render.com), check X-Forwarded-Proto header
+  const isHttps = 
+    req.secure || 
+    req.headers['x-forwarded-proto'] === 'https' ||
+    req.protocol === 'https';
+
+  if (!isHttps) {
+    // Redirect HTTP to HTTPS
+    const httpsUrl = `https://${req.headers.host}${req.originalUrl}`;
+    console.log(`🔒 Redirecting HTTP to HTTPS: ${req.url} -> ${httpsUrl}`);
+    return res.redirect(301, httpsUrl); // 301 Permanent Redirect
+  }
+
+  next();
 };
 
 // Log sanitization - remove sensitive data from logs

@@ -14,6 +14,7 @@ import purchaseRoutes from './routes/purchases.js';
 import { performGlobalShuffle } from './services/shuffleService.js';
 import {
   securityHeaders,
+  enforceHttps,
   generalRateLimit,
   promoCodeRateLimit,
   paymentRateLimit,
