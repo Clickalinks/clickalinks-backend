@@ -488,8 +488,19 @@ router.put('/purchases/:purchaseId',
       }
       
       const { website, dealLink, logoData } = req.body;
-      const purchaseDoc = req.purchaseDoc;
-      const purchaseData = req.purchaseData;
+      
+      // Get purchase document reference
+      const purchaseRef = db.collection('purchasedSquares').doc(purchaseId);
+      const purchaseDoc = await purchaseRef.get();
+      
+      if (!purchaseDoc.exists) {
+        return res.status(404).json({
+          success: false,
+          error: 'Purchase not found'
+        });
+      }
+      
+      const purchaseData = purchaseDoc.data();
       
       // Only allow updating specific fields (website, dealLink, logoData)
       // Critical fields like amount, duration, status, etc. cannot be modified by users
@@ -498,15 +509,37 @@ router.put('/purchases/:purchaseId',
       };
       
       if (website !== undefined) {
-        updateData.website = website.trim();
-        updateData.dealLink = website.trim(); // Keep dealLink in sync with website
+        // SECURITY: Validate HTTPS only, block dangerous protocols
+        const websiteValidation = validateHttpsOnly(website.trim());
+        if (!websiteValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            error: websiteValidation.error || 'Invalid website URL. Only HTTPS URLs are allowed.',
+            code: 'INVALID_URL',
+            suggestion: websiteValidation.sanitized || null
+          });
+        }
+        const sanitizedWebsite = websiteValidation.sanitized || website.trim();
+        updateData.website = sanitizedWebsite;
+        updateData.dealLink = sanitizedWebsite; // Keep dealLink in sync with website
       }
       
       if (dealLink !== undefined) {
-        updateData.dealLink = dealLink.trim();
+        // SECURITY: Validate HTTPS only, block dangerous protocols
+        const dealLinkValidation = validateHttpsOnly(dealLink.trim());
+        if (!dealLinkValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            error: dealLinkValidation.error || 'Invalid deal link URL. Only HTTPS URLs are allowed.',
+            code: 'INVALID_URL',
+            suggestion: dealLinkValidation.sanitized || null
+          });
+        }
+        const sanitizedDealLink = dealLinkValidation.sanitized || dealLink.trim();
+        updateData.dealLink = sanitizedDealLink;
         // If website wasn't provided, update website too
         if (website === undefined) {
-          updateData.website = dealLink.trim();
+          updateData.website = sanitizedDealLink;
         }
       }
       
