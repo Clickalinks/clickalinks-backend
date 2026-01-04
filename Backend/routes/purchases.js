@@ -3,7 +3,8 @@ import { body, validationResult } from 'express-validator';
 import admin from '../config/firebaseAdmin.js';
 import { generalRateLimit } from '../middleware/security.js';
 import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
-import { verifyPurchaseOwnership, verifyPurchaseOwnershipByQuery } from '../middleware/verifyPurchaseOwnership.js';
+// Note: ClickaLinks does not have user accounts, so ownership verification is not needed.
+// Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email.
 
 const router = express.Router();
 const db = admin.firestore();
@@ -15,7 +16,8 @@ const db = admin.firestore();
  * 
  * SECURITY: This endpoint allows anyone to create purchases (they're paying for them).
  * Ownership is established at creation time via the contactEmail field.
- * Users can only modify their own purchases via PUT /api/purchases/:purchaseId (requires ownership verification).
+ * Note: ClickaLinks does not have user accounts or a login system.
+ * Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email at ads@clickalinks.com.
  */
 router.post('/purchases',
   generalRateLimit,
@@ -463,19 +465,22 @@ router.get('/purchases/:purchaseId',
 
 /**
  * PUT /api/purchases/:purchaseId
- * Update a purchase (requires ownership verification)
- * Users can only update their own purchases
- * Allowed fields: website, dealLink, logoData (limited updates only)
+ * Update a purchase (admin only - no user accounts in ClickaLinks)
+ * Users who need to modify their purchase (e.g., fix typo in URL or email) should contact support
+ * 
+ * REMOVED: Ownership verification endpoints are not needed since ClickaLinks doesn't have user accounts.
+ * Users should contact support at ads@clickalinks.com for any purchase changes.
  */
+// Endpoint removed - not applicable to ClickaLinks (no user accounts)
+// If needed for admin use in future, this should be protected by verifyAdminToken middleware
+/*
 router.put('/purchases/:purchaseId',
   generalRateLimit,
   [
-    body('contactEmail').isEmail().withMessage('Valid email is required for ownership verification'),
     body('website').optional().isString().trim().isLength({ max: 500 }).withMessage('Website must be a valid URL (max 500 chars)'),
     body('dealLink').optional().isString().trim().isLength({ max: 500 }).withMessage('Deal link must be a valid URL (max 500 chars)'),
     body('logoData').optional().isString().trim().withMessage('Logo data must be a string')
   ],
-  verifyPurchaseOwnership,
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -558,9 +563,13 @@ router.put('/purchases/:purchaseId',
 
 /**
  * GET /api/purchases/user/:email
- * Get all purchases for a specific user (identified by email)
- * Users can only view their own purchases
+ * Get all purchases for a specific user (admin only - no user accounts in ClickaLinks)
+ * 
+ * REMOVED: Ownership verification endpoints are not needed since ClickaLinks doesn't have user accounts.
+ * Users should contact support at ads@clickalinks.com for any purchase information.
  */
+// Endpoint removed - not applicable to ClickaLinks (no user accounts)
+/*
 router.get('/purchases/user/:email',
   generalRateLimit,
   async (req, res) => {
@@ -625,5 +634,6 @@ router.get('/purchases/user/:email',
     }
   }
 );
+*/
 
 export default router;
