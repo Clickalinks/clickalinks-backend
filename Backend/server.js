@@ -66,9 +66,15 @@ const app = express();
 app.set('trust proxy', true);
 console.log('✅ Trust proxy enabled (for rate limiting behind proxy)');
 
-// SECURITY: Apply security headers first
+// SECURITY: Enforce HTTPS (redirect HTTP to HTTPS)
+// Must be before other middleware to catch all HTTP requests
+app.use(enforceHttps);
+console.log('✅ HTTPS enforcement enabled (HTTP redirects to HTTPS)');
+
+// SECURITY: Apply security headers (helmet) to all routes
+// This includes HSTS headers
 app.use(securityHeaders);
-console.log('✅ Security headers configured (helmet)');
+console.log('✅ Security headers configured (helmet) - HSTS enabled');
 
 // SECURITY: Apply request timeout
 app.use(requestTimeout);
