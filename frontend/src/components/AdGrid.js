@@ -908,17 +908,42 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
   if (isLoading) {
     return (
-      <div className="ad-grid-container">
-        <div className="loading-message">
-          <div className="loading-spinner"></div>
-          Loading advertising spots...
+      <>
+        {isHome && (
+          <SEO
+            title="CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK"
+            description="Browse 2000+ affordable advertising squares starting at just £1 per day. CLICKaLINKS connects UK businesses with customers through grid advertising."
+          />
+        )}
+        <div className="ad-grid-container">
+          <div className="loading-message">
+            <div className="loading-spinner"></div>
+            Loading advertising spots...
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
+  // SEO meta tags for home page only
+  const seoTitle = isHome 
+    ? "CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK"
+    : `Page ${pageNumber} - CLICKaLINKS Advertising Grid`;
+  
+  const seoDescription = isHome
+    ? "Browse 2000+ affordable advertising squares starting at just £1 per day. CLICKaLINKS connects UK businesses with customers through grid advertising. Choose from 10 pages, select your square, and start advertising today."
+    : `Browse advertising squares on page ${pageNumber} of CLICKaLINKS grid. £1 per day affordable advertising for UK businesses.`;
+
   return (
-    <div className="ad-grid-container">
+    <>
+      {isHome && (
+        <SEO
+          title={seoTitle}
+          description={seoDescription}
+          canonical="https://clickalinks.com/"
+        />
+      )}
+      <div className="ad-grid-container">
       {/* Header Section - FIXED LAYOUT */}
       <div className="grid-header">
         <div className="page-info">
