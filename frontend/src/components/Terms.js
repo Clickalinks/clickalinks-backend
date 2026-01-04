@@ -52,25 +52,34 @@ const Terms = () => {
               <li>• 10-day campaign: £10 (£1/day)</li>
               <li>• 20-day campaign: £20 (£1/day)</li>
               <li>• 30-day campaign: £30 (£1/day)</li>
+              <li>• 60-day campaign: £60 (£1/day)</li>
             </ul>
             <p>All payments are processed securely through Stripe. Campaigns begin immediately upon successful payment.</p>
           </div>
           
           <div className="terms-section">
             <h2>🔄 5. Refund & Cancellation Policy</h2>
-            <p>Due to the immediate nature of our service, we do not offer refunds once a campaign has started. Please ensure you:</p>
+            <p>Due to the immediate and automated nature of our service, refunds are generally not available once a campaign has started. However, we handle refunds on a case-by-case basis for exceptional circumstances such as:</p>
+            <ul className="terms-list">
+              <li>Technical issues preventing your advertisement from displaying</li>
+              <li>Duplicate payments or billing errors</li>
+              <li>Unforeseen circumstances beyond your control</li>
+            </ul>
+            <p>To request a refund, please contact support@clickalinks.com with your transaction ID and a detailed explanation. Please ensure you:</p>
             <ul className="terms-list">
               <li>✅ Select the correct campaign duration</li>
-              <li>✅ Upload the appropriate logo</li>
-              <li>✅ Provide the correct destination URL</li>
+              <li>✅ Upload the appropriate logo (JPG, PNG, or GIF format, under 5MB)</li>
+              <li>✅ Provide the correct destination URL (HTTPS required)</li>
+              <li>✅ Verify all business information before completing payment</li>
             </ul>
           </div>
           
           <div className="terms-section">
             <h2>⏰ 6. Campaign Duration & Shuffling</h2>
-            <p>• Campaigns run for exact duration selected (10/20/30 days)</p>
-            <p>• Squares automatically shuffle every 2 hours for fair exposure</p>
-            <p>• No manual position requests are accepted</p>
+            <p>• Campaigns run for the exact duration selected (10, 20, 30, or 60 days)</p>
+            <p>• Squares automatically shuffle every 2 hours to ensure fair exposure for all advertisers</p>
+            <p>• No manual position requests are accepted - all positions are assigned randomly through our fair shuffle system</p>
+            <p>• Your advertisement may appear on different pages throughout your campaign to maximize visibility</p>
           </div>
           
           <div className="terms-section">
@@ -98,8 +107,9 @@ const Terms = () => {
           <div className="terms-section">
             <h2>📞 9. Contact & Support</h2>
             <p>For questions about these terms or our service:</p>
-            <p>📧 Email: <a href="mailto:support@clickalinks.com" className="contact-link">support@clickalinks.com</a></p>
-            <p>Response time: Within 24 hours during business days</p>
+            <p><strong>📧 Email:</strong> <a href="mailto:support@clickalinks.com" className="contact-link">support@clickalinks.com</a></p>
+            <p><strong>Response time:</strong> Within 24 hours during business days (Monday-Friday, 9 AM - 5 PM GMT)</p>
+            <p><strong>Support hours:</strong> Monday through Friday, 9 AM to 5 PM GMT</p>
           </div>
           
           <div className="terms-section" style={{marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0'}}>

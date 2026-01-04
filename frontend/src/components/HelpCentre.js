@@ -72,7 +72,7 @@ const HelpCentre = () => {
         },
         {
           q: 'Can I change my logo or link after my campaign starts?',
-          a: 'Currently, changes to active campaigns require purchasing a new campaign. If you need to update your information, please contact support@clickalinks.com and we\'ll help you find the best solution.'
+          a: 'To maintain fairness and consistency, changes to active campaigns require purchasing a new campaign. If you need to update your information urgently (e.g., incorrect URL), please contact support@clickalinks.com with your purchase details, and we\'ll work with you to find the best solution.'
         },
         {
           q: 'How do I know how many clicks my ad is getting?',
@@ -95,7 +95,7 @@ const HelpCentre = () => {
       questions: [
         {
           q: 'My logo isn\'t displaying correctly. What should I do?',
-          a: 'Make sure your logo is in a standard image format (JPG, PNG, GIF) and under 5MB. For best results, use a square logo (1:1 aspect ratio) with a transparent or white background. If issues persist, try a different image file.'
+          a: 'Make sure your logo is in a standard image format (JPG, PNG, GIF, or WebP) and under 2MB. For best results, use a square logo (1:1 aspect ratio) with a transparent or white background. High-resolution images (at least 500x500 pixels) work best. If issues persist, try a different image file or contact support@clickalinks.com for assistance.'
         },
         {
           q: 'I can\'t see my ad on the grid after payment. What\'s wrong?',
@@ -122,7 +122,7 @@ const HelpCentre = () => {
       questions: [
         {
           q: 'What are the logo requirements?',
-          a: 'Your logo should be: in JPG, PNG, or GIF format; under 5MB in size; ideally square (1:1 aspect ratio) for best display; and have a transparent or white background. High-resolution images work best.'
+          a: 'Your logo should be: in JPG, PNG, GIF, or WebP format; under 2MB in size; ideally square (1:1 aspect ratio) for best display; and have a transparent or white background. High-resolution images (at least 500x500 pixels) work best for clear display on the grid.'
         },
         {
           q: 'What size should my logo be?',
@@ -134,7 +134,7 @@ const HelpCentre = () => {
         },
         {
           q: 'What file formats are supported?',
-          a: 'We support JPG, JPEG, PNG, and GIF formats. PNG files with transparent backgrounds work particularly well for professional-looking advertisements.'
+          a: 'We support JPG, JPEG, PNG, GIF, and WebP formats. PNG files with transparent backgrounds work particularly well for professional-looking advertisements. All files must be under 2MB in size.'
         }
       ]
     },
@@ -149,7 +149,7 @@ const HelpCentre = () => {
         },
         {
           q: 'How do I contact support?',
-          a: 'You can reach our support team by email at support@clickalinks.com. We typically respond within 24 hours during business days. You can also use our contact form on the website.'
+          a: 'You can reach our support team by email at support@clickalinks.com. We typically respond within 24 hours during business days. For urgent matters, please include "URGENT" in your subject line.'
         },
         {
           q: 'What are your support hours?',
@@ -178,7 +178,7 @@ const HelpCentre = () => {
   const quickLinks = [
     { title: 'Start Your Campaign', path: '/campaign', icon: '🚀' },
     { title: 'How It Works', path: '/how-it-works', icon: '📖' },
-    { title: 'Contact Support', path: '/contact', icon: '📧' },
+    { title: 'Contact Support', path: 'mailto:support@clickalinks.com', icon: '📧', external: true },
     { title: 'About Us', path: '/about', icon: 'ℹ️' }
   ];
 
@@ -210,10 +210,17 @@ const HelpCentre = () => {
           <h2>Quick Links</h2>
           <div className="quick-links-grid">
             {quickLinks.map((link, index) => (
-              <Link key={index} to={link.path} className="quick-link-card">
-                <span className="quick-link-icon">{link.icon}</span>
-                <span className="quick-link-title">{link.title}</span>
-              </Link>
+              link.external ? (
+                <a key={index} href={link.path} className="quick-link-card">
+                  <span className="quick-link-icon">{link.icon}</span>
+                  <span className="quick-link-title">{link.title}</span>
+                </a>
+              ) : (
+                <Link key={index} to={link.path} className="quick-link-card">
+                  <span className="quick-link-icon">{link.icon}</span>
+                  <span className="quick-link-title">{link.title}</span>
+                </Link>
+              )
             ))}
           </div>
         </div>
@@ -227,7 +234,7 @@ const HelpCentre = () => {
           
           {filteredCategories.length === 0 && searchQuery ? (
             <div className="no-results">
-              <p>No results found for "{searchQuery}". Try a different search term or <Link to="/contact">contact support</Link>.</p>
+              <p>No results found for "{searchQuery}". Try a different search term or <a href="mailto:support@clickalinks.com">contact support</a>.</p>
             </div>
           ) : (
             <div className="faq-categories">
@@ -270,12 +277,12 @@ const HelpCentre = () => {
             <h2>Still Need Help?</h2>
             <p>Can't find what you're looking for? Our support team is here to help!</p>
             <div className="support-cta-buttons">
-              <Link to="/contact" className="cta-button primary">
+              <a href="mailto:support@clickalinks.com" className="cta-button primary">
                 Contact Support
-              </Link>
-              <a href="mailto:support@clickalinks.com" className="cta-button secondary">
-                Email Us
               </a>
+              <Link to="/about" className="cta-button secondary">
+                Learn More About Us
+              </Link>
             </div>
             <p className="support-note">
               📧 support@clickalinks.com • We typically reply within 24 hours

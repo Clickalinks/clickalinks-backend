@@ -18,6 +18,7 @@ const About = lazy(() => import('./components/About'));
 const HowItWorks = lazy(() => import('./components/HowItWorks'));
 const Terms = lazy(() => import('./components/Terms'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const HelpCentre = lazy(() => import('./components/HelpCentre'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
 // Loading fallback component
@@ -168,7 +169,23 @@ function App() {
               <Suspense fallback={<LoadingFallback />}>
                 <PrivacyPolicy />
               </Suspense>
-            } 
+            }
+          />
+          <Route 
+            path="/help" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <HelpCentre />
+              </Suspense>
+            }
+          />
+          <Route 
+            path="/help-centre" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <HelpCentre />
+              </Suspense>
+            }
           />
 
           {/* Admin Route - Lazy loaded (obscured URL for security) */}

@@ -260,15 +260,15 @@ const PrivacyPolicy = () => {
               <div className="approach-item">
                 <span className="approach-icon">🚫</span>
                 <div>
-                  <h4>No Tracking</h4>
-                  <p>No analytics, cookies, or user profiling</p>
+                  <h4>No User Tracking</h4>
+                  <p>No user accounts, cookies, or personal profiling</p>
                 </div>
               </div>
               <div className="approach-item">
                 <span className="approach-icon">💾</span>
                 <div>
-                  <h4>Local Storage</h4>
-                  <p>Your data stays in your browser</p>
+                  <h4>Secure Storage</h4>
+                  <p>Cloud storage with industry-standard security</p>
                 </div>
               </div>
               <div className="approach-item">
