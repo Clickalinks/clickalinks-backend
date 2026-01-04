@@ -1,9 +1,16 @@
 import React from 'react';
+import SEO from './SEO';
 import './HowItWorks.css';
 
 const HowItWorks = () => {
   return (
-    <div className="how-it-works">
+    <>
+      <SEO
+        title="How It Works - CLICKaLINKS Advertising Platform Guide"
+        description="Learn how CLICKaLINKS advertising platform works. Simple 3-step process: select a square, upload your logo and details, complete payment. Your ad goes live immediately. £1 per day affordable advertising."
+        keywords="how clickalinks works, advertising guide, how to advertise, advertising process, clickalinks tutorial, advertising steps, advertising platform guide"
+      />
+      <div className="how-it-works">
       {/* Hero Section */}
       <div className="hero-section">
         <div className="container">

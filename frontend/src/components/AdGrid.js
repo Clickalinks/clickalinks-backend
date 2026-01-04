@@ -9,6 +9,7 @@ import { getCachedPurchases, cachePurchases, clearExpiredCache } from '../utils/
 import { createImageObserver } from '../utils/imageOptimizer';
 import { debounce } from '../utils/debounce';
 import { trackClick } from '../utils/clickTracker';
+import SEO from './SEO';
 import './AdGrid.css';
 
 // Helper function to detect mobile devices (NOT tablets)

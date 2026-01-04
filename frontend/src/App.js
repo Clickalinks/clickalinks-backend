@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
@@ -71,17 +72,18 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
-        <ScrollToTop />
-        <KeyboardShortcutHandler />
-        <div className="App">
-          <Header />
-          <RunningStrip />
+      <HelmetProvider>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <ScrollToTop />
+          <KeyboardShortcutHandler />
+          <div className="App">
+            <Header />
+            <RunningStrip />
 
         <Routes>
           {/* Home route - Page 1 */}
@@ -199,9 +201,10 @@ function App() {
           />
         </Routes>
 
-          <Footer />
-        </div>
-      </Router>
+            <Footer />
+          </div>
+        </Router>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }

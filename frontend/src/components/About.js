@@ -1,9 +1,16 @@
 import React from 'react';
+import SEO from './SEO';
 import './About.css';
 
 const About = () => {
   return (
-    <div className="about-page">
+    <>
+      <SEO
+        title="About CLICKaLINKS - UK-Based Deals & Advertising Platform"
+        description="Learn about CLICKaLINKS - a UK-based deals and promotions platform created to help customers find genuine savings and give businesses an affordable way to advertise. Founded in 2025 in Devon, connecting trusted businesses with shoppers."
+        keywords="about clickalinks, clickalinks history, UK advertising platform, Devon business, affordable advertising UK, business story, founder clickalinks, deals platform UK"
+      />
+      <div className="about-page">
       {/* Hero Section */}
       <div className="about-hero">
         <div className="container">

@@ -1,9 +1,16 @@
 import React from 'react';
+import SEO from './SEO';
 import './Terms.css';  // Fixed import - should be Terms.css, not About.css
 
 const Terms = () => {
   return (
-    <div>
+    <>
+      <SEO
+        title="Terms & Conditions - CLICKaLINKS Advertising Platform"
+        description="Read CLICKaLINKS terms and conditions. Learn about our advertising guidelines, pricing, refund policy, campaign duration, content moderation, and service terms. UK-based advertising platform terms."
+        keywords="terms and conditions, advertising terms, service terms, clickalinks terms, UK advertising terms, business terms, legal terms"
+      />
+      <div>
       {/* Main Content */}
       <div className="terms-container">
         <div className="terms-content">

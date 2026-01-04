@@ -1,9 +1,16 @@
 import React from 'react';
+import SEO from './SEO';
 import './PrivacyPolicy.css';
 
 const PrivacyPolicy = () => {
   return (
-    <div className="privacy-container">
+    <>
+      <SEO
+        title="Privacy Policy - CLICKaLINKS Data Protection & Privacy"
+        description="Read CLICKaLINKS privacy policy. Learn how we collect, store, and protect your data. Transparent data practices, no user tracking, secure cloud storage. GDPR compliant privacy policy for UK-based advertising platform."
+        keywords="privacy policy, data protection, GDPR, privacy, data security, clickalinks privacy, advertising privacy, UK privacy policy, data protection UK"
+      />
+      <div className="privacy-container">
       <div className="privacy-content">
         <header className="privacy-header">
           <h1>Privacy Policy</h1>
