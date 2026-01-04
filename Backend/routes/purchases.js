@@ -1,9 +1,10 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import admin from '../config/firebaseAdmin.js';
-import { generalRateLimit } from '../middleware/security.js';
+import { generalRateLimit, adCreationRateLimit } from '../middleware/security.js';
 import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
 import { verifyAdminToken } from './admin.js';
+import { validateHttpsOnly, sanitizeUrl } from '../utils/urlValidation.js';
 // Note: ClickaLinks does not have user accounts, so ownership verification is not needed.
 // Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email.
 // Admin-only endpoints for deleting/updating purchases are protected with verifyAdminToken middleware.
@@ -22,7 +23,7 @@ const db = admin.firestore();
  * Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email at ads@clickalinks.com.
  */
 router.post('/purchases',
-  generalRateLimit,
+  adCreationRateLimit, // Stricter rate limit for ad creation (5 per 15 minutes)
   [
     body('squareNumber').isInt({ min: 1 }).withMessage('Square number must be a positive integer'),
     body('businessName').notEmpty().trim().withMessage('Business name is required'),
@@ -73,6 +74,39 @@ router.post('/purchases',
       const finalPurchaseId = purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
       const normalizedEmail = contactEmail.trim().toLowerCase();
       const normalizedBusiness = businessName.trim().toLowerCase();
+
+      // ✅ SECURITY: Validate and sanitize URLs (HTTPS only, block dangerous protocols)
+      // Validate website URL
+      if (website && website.trim()) {
+        const websiteValidation = validateHttpsOnly(website.trim());
+        if (!websiteValidation.valid) {
+          console.log(`❌ Invalid website URL: ${websiteValidation.error}`);
+          return res.status(400).json({
+            success: false,
+            error: websiteValidation.error || 'Invalid website URL. Only HTTPS URLs are allowed.',
+            code: 'INVALID_URL',
+            suggestion: websiteValidation.sanitized || null
+          });
+        }
+        // Use sanitized version (adds https:// if missing)
+        website = websiteValidation.sanitized || website.trim();
+      }
+
+      // Validate dealLink URL
+      if (dealLink && dealLink.trim()) {
+        const dealLinkValidation = validateHttpsOnly(dealLink.trim());
+        if (!dealLinkValidation.valid) {
+          console.log(`❌ Invalid dealLink URL: ${dealLinkValidation.error}`);
+          return res.status(400).json({
+            success: false,
+            error: dealLinkValidation.error || 'Invalid deal link URL. Only HTTPS URLs are allowed.',
+            code: 'INVALID_URL',
+            suggestion: dealLinkValidation.sanitized || null
+          });
+        }
+        // Use sanitized version (adds https:// if missing)
+        dealLink = dealLinkValidation.sanitized || dealLink.trim();
+      }
 
       // ✅ CHECK 1: Verify promo code hasn't been used by this email/business BEFORE any other checks
       // This must happen first to prevent saving purchases with duplicate promo codes

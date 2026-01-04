@@ -58,14 +58,40 @@ const BusinessDetails = () => {
       errors.contactEmail = 'Please enter a valid email address';
     }
 
-    // Website validation
+    // Website validation - HTTPS only, block dangerous protocols
     if (!formData.website.trim()) {
       errors.website = 'Website URL is required';
     } else {
-      try {
-        new URL(formData.website);
-      } catch (e) {
-        errors.website = 'Please enter a valid URL (include http:// or https://)';
+      const url = formData.website.trim().toLowerCase();
+      
+      // Block dangerous protocols (javascript:, data:, vbscript:, etc.)
+      const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:', 'about:'];
+      if (dangerousProtocols.some(protocol => url.startsWith(protocol))) {
+        errors.website = 'Dangerous protocols are not allowed. Please use HTTPS URLs only.';
+      }
+      // Block HTTP (only allow HTTPS)
+      else if (url.startsWith('http://')) {
+        errors.website = 'HTTP is not allowed for security. Please use HTTPS (https://) instead.';
+      }
+      // Require HTTPS
+      else if (!url.startsWith('https://')) {
+        // Auto-fix: add https:// if missing
+        if (!url.includes('://')) {
+          formData.website = `https://${formData.website.trim()}`;
+        } else {
+          errors.website = 'Only HTTPS URLs are allowed. Please use https:// instead.';
+        }
+      }
+      // Validate URL format
+      else {
+        try {
+          const urlObj = new URL(formData.website.trim());
+          if (urlObj.protocol !== 'https:') {
+            errors.website = 'Only HTTPS protocol is allowed.';
+          }
+        } catch (e) {
+          errors.website = 'Please enter a valid HTTPS URL (e.g., https://example.com)';
+        }
       }
     }
 

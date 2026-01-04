@@ -56,6 +56,18 @@ export const securityHeaders = helmet({
 
 // Rate limiting configurations
 // Note: trust proxy must be set in server.js before using these limiters
+
+// Stricter rate limit specifically for ad creation (prevent spam/abuse)
+export const adCreationRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit to 5 ad creations per 15 minutes per IP
+  message: 'Too many ad creation attempts. Please wait a few minutes before creating another ad.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: headerBasedKeyGenerator,
+});
+
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
