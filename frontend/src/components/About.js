@@ -180,7 +180,7 @@ const About = () => {
               <p>Join hundreds of businesses already advertising on CLICKaLINKS.</p>
               <div className="cta-buttons">
                 <a href="/" className="cta-btn primary">View Advertising Grid</a>
-                <a href="/how-it-works" className="cta-btn secondary">Learn How It Works</a>
+                <Link to="/blog" className="cta-btn secondary">Read Our Blog</Link>
               </div>
             </div>
           </div>

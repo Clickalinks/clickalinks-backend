@@ -179,6 +179,7 @@ const HelpCentre = () => {
   const quickLinks = [
     { title: 'Start Your Campaign', path: '/campaign', icon: '🚀' },
     { title: 'How It Works', path: '/how-it-works', icon: '📖' },
+    { title: 'Blog', path: '/blog', icon: '📝' },
     { title: 'Contact Support', path: 'mailto:support@clickalinks.com', icon: '📧', external: true },
     { title: 'About Us', path: '/about', icon: 'ℹ️' }
   ];

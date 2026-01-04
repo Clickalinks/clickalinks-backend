@@ -190,6 +190,14 @@ function App() {
               </Suspense>
             }
           />
+          <Route 
+            path="/blog" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <Blog />
+              </Suspense>
+            }
+          />
 
           {/* Admin Route - Lazy loaded (obscured URL for security) */}
           <Route 
