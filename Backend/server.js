@@ -19,6 +19,7 @@ import {
   paymentRateLimit,
   adminRateLimit,
   adCreationRateLimit,
+  shuffleRateLimit,
   requestTimeout,
   sanitizeError,
   sanitizeLogData

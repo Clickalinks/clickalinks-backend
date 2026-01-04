@@ -71,17 +71,34 @@ function getTimeBasedSeed() {
  * Perform global shuffle of all active purchases
  * Assigns new squareNumber to each purchase using Fisher-Yates algorithm
  * 
+ * SECURITY: 
+ * - Seed is generated server-side and cannot be manipulated
+ * - No user input is accepted
+ * - All operations are logged for audit trail
+ * 
+ * @param {number} [overrideSeed] - Optional seed override (ADMIN ONLY - for testing/debugging)
+ *                                   If not provided, uses time-based seed
+ *                                   WARNING: Only use in controlled environments
  * @returns {Promise<Object>} - Shuffle result with statistics
  */
-export async function performGlobalShuffle() {
+export async function performGlobalShuffle(overrideSeed = null) {
   const startTime = Date.now();
   
   try {
     console.log('🔄 Starting Fisher-Yates shuffle...');
     
-    // Get time-based seed for deterministic shuffling
-    const seed = getTimeBasedSeed();
-    console.log(`🌱 Using seed: ${seed}`);
+    // SECURITY: Use server-side generated seed (cannot be manipulated by users)
+    // If overrideSeed is provided, log it as a security event
+    let seed;
+    if (overrideSeed !== null) {
+      console.warn(`⚠️ SECURITY WARNING: Shuffle seed override detected: ${overrideSeed}`);
+      console.warn(`⚠️ This should only happen in controlled testing/debugging environments`);
+      seed = overrideSeed;
+    } else {
+      // Normal operation: use time-based seed (deterministic, server-controlled)
+      seed = getTimeBasedSeed();
+    }
+    console.log(`🌱 Using seed: ${seed} (${overrideSeed !== null ? 'OVERRIDE' : 'time-based'})`);
     
     // STEP 1: Fetch all active purchases from Firestore
     const db = getDb();

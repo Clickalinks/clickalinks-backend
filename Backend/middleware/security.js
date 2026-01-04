@@ -116,6 +116,25 @@ export const adminRateLimit = rateLimit({
   keyGenerator: headerBasedKeyGenerator,
 });
 
+// Strict rate limit for shuffle operations (prevent manipulation/spam)
+export const shuffleRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit to 5 shuffle operations per hour per IP
+  message: 'Too many shuffle requests. Shuffles are rate limited to prevent abuse. Please wait before triggering another shuffle.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: headerBasedKeyGenerator,
+  // Custom handler to include more context
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      error: 'Too many shuffle requests. Shuffles are rate limited to prevent manipulation and abuse. Maximum 5 shuffles per hour.',
+      retryAfter: Math.ceil(60 * 60 * 1000 / 1000) // 1 hour in seconds
+    });
+  }
+});
+
 // Request timeout configuration
 export const requestTimeout = timeout.handler({
   timeout: 30000, // 30 seconds
