@@ -4,8 +4,8 @@ import { useLocation } from 'react-router-dom';
 
 const SITE_URL = 'https://clickalinks.com';
 const SITE_NAME = 'CLICKaLINKS';
-const DEFAULT_TITLE = 'CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day';
-const DEFAULT_DESCRIPTION = 'CLICKaLINKS offers affordable grid advertising starting at just £1 per day. Join 2000+ advertising squares across 10 pages. Perfect for businesses of all sizes looking to reach customers with their deals and promotions.';
+const DEFAULT_TITLE = 'CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK';
+const DEFAULT_DESCRIPTION = 'CLICKaLINKS is the UK\'s most affordable grid advertising platform. Starting at just £1 per day, showcase your business across 2000+ advertising squares on 10 pages. Perfect for small businesses, local shops, online stores, and service providers looking to reach customers with their deals, promotions, and special offers. Join hundreds of UK businesses already advertising. No contracts, no hidden fees, instant activation. Click through to customer deals, discounts, and promotions all year round.';
 const DEFAULT_KEYWORDS = 'affordable advertising, grid advertising, advertising platform, UK advertising, business advertising, £1 per day advertising, cheap advertising, digital marketing, online advertising, business promotion, deals platform, promotions advertising, clickalinks, clickalinks.com';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.PNG`;
 

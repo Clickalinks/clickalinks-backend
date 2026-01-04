@@ -931,8 +931,8 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     : `Page ${pageNumber} - CLICKaLINKS Advertising Grid`;
   
   const seoDescription = isHome
-    ? "Browse 2000+ affordable advertising squares starting at just £1 per day. CLICKaLINKS connects UK businesses with customers through grid advertising. Choose from 10 pages, select your square, and start advertising today."
-    : `Browse advertising squares on page ${pageNumber} of CLICKaLINKS grid. £1 per day affordable advertising for UK businesses.`;
+    ? "CLICKaLINKS is the UK's most affordable grid advertising platform. Starting at just £1 per day, showcase your business across 2000+ advertising squares on 10 pages. Perfect for small businesses, local shops, online stores, and service providers looking to reach customers with their deals, promotions, and special offers. Join hundreds of UK businesses already advertising. No contracts, no hidden fees, instant activation. Click through to customer deals, discounts, and promotions all year round."
+    : `Browse advertising squares on page ${pageNumber} of CLICKaLINKS grid. £1 per day affordable advertising for UK businesses. Select from available squares, upload your logo, and start reaching customers today.`;
 
   return (
     <>
