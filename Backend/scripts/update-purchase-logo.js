@@ -41,7 +41,9 @@ async function updatePurchaseLogo(purchaseId) {
     
     // Search for logo in Firebase Storage
     console.log(`\n🔍 Searching Firebase Storage for logo...`);
-    const bucket = storage.bucket();
+    // Use the Firebase project's default storage bucket
+    const bucketName = 'clickalinks-frontend.firebasestorage.app';
+    const bucket = storage.bucket(bucketName);
     const [files] = await bucket.getFiles({ prefix: 'logos/' });
     
     console.log(`   Found ${files.length} total files in Storage`);

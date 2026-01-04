@@ -412,56 +412,15 @@ router.post('/track-click',
   }
 );
 
-/**
- * GET /api/purchases/:purchaseId
- * Get a specific purchase (requires ownership verification)
- * Users can only view their own purchases
- */
-router.get('/purchases/:purchaseId',
-  generalRateLimit,
-  verifyPurchaseOwnershipByQuery,
-  async (req, res) => {
-    try {
-      const purchaseData = req.purchaseData;
-      
-      // Don't expose sensitive data like internal IDs
-      const safePurchaseData = {
-        purchaseId: purchaseData.purchaseId,
-        squareNumber: purchaseData.squareNumber,
-        pageNumber: purchaseData.pageNumber,
-        businessName: purchaseData.businessName,
-        contactEmail: purchaseData.contactEmail,
-        website: purchaseData.website || purchaseData.dealLink,
-        logoData: purchaseData.logoData,
-        amount: purchaseData.amount,
-        finalAmount: purchaseData.finalAmount,
-        originalAmount: purchaseData.originalAmount,
-        discountAmount: purchaseData.discountAmount,
-        duration: purchaseData.duration,
-        status: purchaseData.status,
-        paymentStatus: purchaseData.paymentStatus,
-        clickCount: purchaseData.clickCount || 0,
-        startDate: purchaseData.startDate?.toDate?.()?.toISOString() || purchaseData.startDate,
-        endDate: purchaseData.endDate?.toDate?.()?.toISOString() || purchaseData.endDate,
-        purchaseDate: purchaseData.purchaseDate?.toDate?.()?.toISOString() || purchaseData.purchaseDate,
-        promoCode: purchaseData.promoCode
-      };
-      
-      res.json({
-        success: true,
-        purchase: safePurchaseData
-      });
-      
-    } catch (error) {
-      console.error('❌ Error fetching purchase:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch purchase',
-        message: error.message
-      });
-    }
-  }
-);
+// Note: The following endpoints have been removed because ClickaLinks does not have user accounts.
+// Users who need to view or modify their purchase data should contact support via email at ads@clickalinks.com.
+//
+// Removed endpoints:
+// - GET /api/purchases/:purchaseId (was: Get a specific purchase with ownership verification)
+// - PUT /api/purchases/:purchaseId (was: Update a purchase with ownership verification)  
+// - GET /api/purchases/user/:email (was: Get all purchases for a specific email)
+//
+// If admin functionality is needed in the future, these endpoints should be protected with verifyAdminToken middleware.
 
 /**
  * PUT /api/purchases/:purchaseId
