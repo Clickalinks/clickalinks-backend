@@ -1,20 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Logo uploads directory
+    // Logo uploads directory - IMAGE FILES ONLY
     match /logos/{logoId} {
-      // Allow read access to all logos (public display)
+      // Allow read access to all logos (public display - needed for website)
       allow read: if true;
       
-      // Only allow authenticated uploads with size and type restrictions
-      allow write: if request.auth != null
-                  && request.resource.size < 2 * 1024 * 1024  // 2MB limit
-                  && request.resource.contentType.matches('image/.*');
+      // SECURITY: Only allow image files with size restriction
+      // Validates both MIME type (contentType) and file size
+      // Note: ClickaLinks doesn't use Firebase Auth, so we don't check request.auth
+      // Security is provided by: frontend validation, backend validation, and these storage rules
+      allow write: if request.resource.size < 5 * 1024 * 1024 // 5MB max
+                   && request.resource.contentType.matches('image/(jpeg|jpg|png|gif|webp)');
       
-      // Allow delete only by uploader or admin (if you implement admin check)
-      allow delete: if request.auth != null 
-                   && (request.auth.uid == resource.metadata.uploaderId 
-                       || false); // Add admin check if needed
+      // Allow delete for cleanup (admin can delete via Firebase Console or backend)
+      allow delete: if true;
     }
     
     // Default deny all other paths
