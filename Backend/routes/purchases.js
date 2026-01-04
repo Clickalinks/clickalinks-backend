@@ -487,7 +487,15 @@ router.put('/purchases/:purchaseId',
         });
       }
       
+      const { purchaseId } = req.params;
       const { website, dealLink, logoData } = req.body;
+      
+      if (!purchaseId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Purchase ID is required'
+        });
+      }
       
       // Get purchase document reference
       const purchaseRef = db.collection('purchasedSquares').doc(purchaseId);
