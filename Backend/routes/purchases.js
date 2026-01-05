@@ -222,6 +222,7 @@ router.post('/purchases',
       // Prepare purchase data
       // Ensure logoData is properly formatted - use storagePath if logoData is missing
       let finalLogoData = logoData;
+      let finalStoragePath = storagePath;
       if (!finalLogoData && storagePath) {
         // If we have storagePath but no logoData, construct the Firebase Storage URL
         if (storagePath.startsWith('logos/')) {
