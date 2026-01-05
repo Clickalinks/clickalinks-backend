@@ -78,9 +78,11 @@ if (!admin.apps.length) {
         }
         
         const projectId = serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
+        const storageBucket = serviceAccount.storageBucket || process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
-          projectId: projectId // ALWAYS set projectId explicitly
+          projectId: projectId, // ALWAYS set projectId explicitly
+          storageBucket: storageBucket // Set storage bucket explicitly
         });
         console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT env var');
         console.log('🔑 Project ID:', projectId);
@@ -101,9 +103,11 @@ if (!admin.apps.length) {
         const serviceAccountPath = join(__dirname, '..', 'firebase-service-account.json');
         console.log('📁 Looking for service account file at:', serviceAccountPath);
         const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+        const storageBucket = serviceAccount.storageBucket || process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
-          projectId: serviceAccount.project_id // Explicitly set project ID
+          projectId: serviceAccount.project_id, // Explicitly set project ID
+          storageBucket: storageBucket // Set storage bucket explicitly
         });
         console.log('✅ Firebase Admin initialized from firebase-service-account.json');
         console.log('🔑 Project ID:', serviceAccount.project_id);
@@ -140,13 +144,15 @@ if (!admin.apps.length) {
               if (hasBegin && hasEnd && isValidLength) {
                 // All validations passed - try to use individual env vars
                 try {
+                  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
                   admin.initializeApp({
                     credential: admin.credential.cert({
                       projectId: envProjectId.trim(),
                       clientEmail: envClientEmail.trim(),
                       privateKey: privateKey
                     }),
-                    projectId: envProjectId.trim()
+                    projectId: envProjectId.trim(),
+                    storageBucket: storageBucket // Set storage bucket explicitly
                   });
                   console.log('✅ Firebase Admin initialized from environment variables');
                   console.log('🔑 Project ID:', envProjectId.trim());
@@ -173,8 +179,10 @@ if (!admin.apps.length) {
         // This is the preferred method for Render.com deployments
         if (!useIndividualEnvVars && !admin.apps.length) {
           try {
+            const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
             admin.initializeApp({
-              projectId: projectId
+              projectId: projectId,
+              storageBucket: storageBucket // Set storage bucket explicitly
             });
             console.log('✅ Firebase Admin initialized with default credentials');
             console.log('🔑 Project ID:', projectId);

@@ -260,7 +260,8 @@ router.post('/purchases',
       // This prevents creating purchases with broken logo references
       if (finalStoragePath && finalStoragePath.startsWith('logos/')) {
         try {
-          const file = admin.storage().bucket().file(finalStoragePath);
+          const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
+          const file = admin.storage().bucket(storageBucket).file(finalStoragePath);
           const [exists] = await file.exists();
           
           if (!exists) {

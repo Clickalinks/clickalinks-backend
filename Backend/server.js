@@ -525,8 +525,24 @@ app.post('/api/send-confirmation-email', async (req, res) => {
       promoCode: purchaseData.promoCode
     });
     
-    // FIXED: Call with only purchaseData parameter
-    sendAdminNotificationEmail(purchaseData)
+    // FIXED: Call with correct parameters (type, data)
+    sendAdminNotificationEmail('purchase', {
+      businessName: purchaseData.businessName,
+      contactEmail: purchaseData.contactEmail,
+      squareNumber: purchaseData.squareNumber,
+      pageNumber: purchaseData.pageNumber || 1,
+      duration: purchaseData.selectedDuration || purchaseData.duration || 30,
+      amount: purchaseData.finalAmount || purchaseData.amount || 10,
+      transactionId: purchaseData.transactionId || null,
+      finalAmount: purchaseData.finalAmount || purchaseData.amount || 10,
+      originalAmount: purchaseData.originalAmount || purchaseData.finalAmount || purchaseData.amount || 10,
+      discountAmount: purchaseData.discountAmount || 0,
+      selectedDuration: purchaseData.selectedDuration || purchaseData.duration || 30,
+      purchaseId: purchaseData.purchaseId || null,
+      promoCode: purchaseData.promoCode || null,
+      promoId: purchaseData.promoId || null,
+      website: purchaseData.website || purchaseData.dealLink || ''
+    })
       .then(adminResult => {
         if (adminResult.success) {
           console.log('✅ Admin notification email sent successfully:', adminResult.messageId);
