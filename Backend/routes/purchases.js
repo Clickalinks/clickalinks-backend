@@ -5,6 +5,7 @@ import { generalRateLimit, adCreationRateLimit } from '../middleware/security.js
 import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
 import { verifyAdminToken } from './admin.js';
 import { validateHttpsOnly, sanitizeUrl } from '../utils/urlValidation.js';
+import { validatePromoCode, applyPromoCode } from '../services/promoCodeService.js';
 // Note: ClickaLinks does not have user accounts, so ownership verification is not needed.
 // Users who need to modify their purchase data (e.g., fix a typo in URL or email) should contact support via email.
 // Admin-only endpoints for deleting/updating purchases are protected with verifyAdminToken middleware.
@@ -110,31 +111,41 @@ router.post('/purchases',
 
       // ✅ CHECK 1: Verify promo code hasn't been used by this email/business BEFORE any other checks
       // This must happen first to prevent saving purchases with duplicate promo codes
+      // REFRESHED: Stricter validation - check both email AND business name separately
       if (promoCode || promoId) {
-        const paidPurchasesSnapshot = await db.collection('purchasedSquares')
+        // Check by email address
+        const existingByEmail = await db.collection('purchasedSquares')
+          .where('contactEmail', '==', normalizedEmail)
+          .where('promoCode', '!=', null)
           .where('paymentStatus', '==', 'paid')
+          .limit(1)
           .get();
         
-        const hasUsedPromo = paidPurchasesSnapshot.docs.some(doc => {
-          const data = doc.data();
-          const hasPromo = data.promoCode || data.promoId;
-          if (!hasPromo) return false;
-          
-          // Check if email matches (case-insensitive)
-          const emailMatch = data.contactEmail && data.contactEmail.toLowerCase() === normalizedEmail;
-          // Check if business name matches (case-insensitive)
-          const businessMatch = data.businessName && data.businessName.toLowerCase() === normalizedBusiness;
-          
-          // Return true if EITHER email OR business name matches (one-per-user restriction)
-          return emailMatch || businessMatch;
-        });
-        
-        if (hasUsedPromo) {
-          console.log(`❌ Promo code restriction: ${normalizedEmail} or ${normalizedBusiness} has already used a promo code`);
+        if (!existingByEmail.empty) {
+          const existing = existingByEmail.docs[0].data();
+          console.log(`❌ Promo code restriction: Email ${normalizedEmail} has already used promo code ${existing.promoCode}`);
           return res.status(400).json({
             success: false,
-            error: 'Each business/email can only use one promo code. You have already used a promo code.',
-            code: 'PROMO_ALREADY_USED'
+            error: `This email address has already used a promo code (${existing.promoCode}). Only one promo code per email address is allowed.`,
+            code: 'PROMO_ALREADY_USED_EMAIL'
+          });
+        }
+
+        // Check by business name
+        const existingByBusiness = await db.collection('purchasedSquares')
+          .where('businessName', '==', businessName.trim())
+          .where('promoCode', '!=', null)
+          .where('paymentStatus', '==', 'paid')
+          .limit(1)
+          .get();
+        
+        if (!existingByBusiness.empty) {
+          const existing = existingByBusiness.docs[0].data();
+          console.log(`❌ Promo code restriction: Business ${businessName.trim()} has already used promo code ${existing.promoCode}`);
+          return res.status(400).json({
+            success: false,
+            error: `This business name has already used a promo code (${existing.promoCode}). Only one promo code per business is allowed.`,
+            code: 'PROMO_ALREADY_USED_BUSINESS'
           });
         }
       }
@@ -229,7 +240,8 @@ router.post('/purchases',
         businessName: businessName.trim(),
         contactEmail: normalizedEmail,
         logoData: finalLogoData || null,
-        storagePath: storagePath || null, // Save storage path for reference
+        logoURL: finalLogoData || null, // Also store as logoURL for compatibility
+        storagePath: finalStoragePath || null, // Save storage path for reference
         dealLink: dealLink || website || '',
         amount: finalFinalAmount,
         originalAmount: finalOriginalAmount,
@@ -266,8 +278,14 @@ router.post('/purchases',
       if (!freshData || !freshData.emailsSent) {
         console.log('📧 Sending emails for purchase:', finalPurchaseId);
         
-        // Send admin notification email and await result
+        // ============================================
+        // REFRESHED: SEND EMAILS SEQUENTIALLY
+        // ============================================
+        
         let adminEmailSuccess = false;
+        let customerEmailSuccess = false;
+
+        // 1. Send admin notification email
         try {
           const adminResult = await sendAdminNotificationEmail('purchase', {
             businessName: businessName.trim(),
@@ -280,10 +298,11 @@ router.post('/purchases',
             finalAmount: finalFinalAmount,
             originalAmount: finalOriginalAmount,
             discountAmount: finalDiscountAmount,
-            selectedDuration: duration,
+            selectedDuration: parseInt(duration),
             purchaseId: finalPurchaseId,
             promoCode: promoCode || null,
-            promoId: promoId || null
+            promoId: promoId || null,
+            website: website || dealLink || ''
           });
           adminEmailSuccess = adminResult && adminResult.success;
           if (adminEmailSuccess) {
@@ -293,11 +312,9 @@ router.post('/purchases',
           }
         } catch (err) {
           console.error('❌ Admin notification email error:', err.message);
-          console.error('   Full error:', err);
         }
 
-        // Send confirmation email to customer (this sends both welcome + invoice)
-        let customerEmailSuccess = false;
+        // 2. Send customer emails (welcome + invoice)
         if (contactEmail) {
           try {
             const customerResult = await sendAdConfirmationEmail({
@@ -305,28 +322,51 @@ router.post('/purchases',
               contactEmail: contactEmail.trim(),
               squareNumber,
               pageNumber,
-              duration: parseInt(duration), // Ensure duration is an integer
-              selectedDuration: parseInt(duration), // Email service uses selectedDuration
+              duration: parseInt(duration),
+              selectedDuration: parseInt(duration),
               amount: finalFinalAmount,
               originalAmount: finalOriginalAmount,
               finalAmount: finalFinalAmount,
               discountAmount: finalDiscountAmount,
               transactionId: transactionId || null,
               promoCode: promoCode || null,
-              promoId: promoId || null
+              promoId: promoId || null,
+              website: website || dealLink || '',
+              logoURL: finalLogoData || null
             });
             customerEmailSuccess = customerResult && customerResult.success;
             if (customerEmailSuccess) {
-              console.log('✅ Customer confirmation emails sent successfully');
+              console.log('✅ Customer confirmation emails (welcome + invoice) sent successfully');
             } else {
               console.error('❌ Customer confirmation emails failed:', customerResult?.message || 'Unknown error');
             }
           } catch (err) {
             console.error('❌ Customer confirmation email error:', err.message);
-            console.error('   Full error:', err);
           }
         } else {
           console.warn('⚠️ No contact email provided, skipping customer emails');
+        }
+
+        // 3. If promo code was used, send special admin notification
+        if (promoCode && adminEmailSuccess) {
+          try {
+            await sendAdminNotificationEmail('promoCodeUsed', {
+              businessName: businessName.trim(),
+              contactEmail: contactEmail.trim(),
+              squareNumber,
+              pageNumber,
+              duration,
+              amount: finalFinalAmount,
+              originalAmount: finalOriginalAmount,
+              discountAmount: finalDiscountAmount,
+              promoCode: promoCode,
+              purchaseId: finalPurchaseId
+            });
+            console.log('✅ Promo code usage notification sent to admin');
+          } catch (err) {
+            console.error('❌ Promo code notification email error:', err.message);
+            // Don't fail the purchase if this email fails
+          }
         }
 
         // Only set emailsSent to true if at least admin email was sent successfully

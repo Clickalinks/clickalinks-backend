@@ -1177,6 +1177,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 

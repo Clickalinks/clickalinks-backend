@@ -117,7 +117,7 @@ const SEO = ({
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_GB" />
 
-      {/* Twitter Card */}
+      {/* X (formerly Twitter) Card - Note: X still uses twitter: meta tags */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={canonicalUrl} />
       <meta name="twitter:title" content={fullTitle} />

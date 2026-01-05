@@ -128,6 +128,7 @@ const HowItWorks = () => {
       </div>
 
     </div>
+    </>
   );
 };
 

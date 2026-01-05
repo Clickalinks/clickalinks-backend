@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
@@ -73,8 +72,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <HelmetProvider>
-        <Router
+      <Router
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true
@@ -213,7 +211,6 @@ function App() {
             <Footer />
           </div>
         </Router>
-      </HelmetProvider>
     </ErrorBoundary>
   );
 }

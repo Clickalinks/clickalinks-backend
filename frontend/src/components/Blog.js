@@ -332,13 +332,13 @@ const Blog = () => {
                       Facebook
                     </a>
                     <a 
-                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent('https://clickalinks.com/blog')}&text=${encodeURIComponent('Getting Started with Grid Advertising - Your Complete Guide')}`}
+                      href={`https://x.com/intent/tweet?url=${encodeURIComponent('https://clickalinks.com/blog')}&text=${encodeURIComponent('Getting Started with Grid Advertising - Your Complete Guide')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="share-button twitter"
-                      aria-label="Share on Twitter"
+                      className="share-button x"
+                      aria-label="Share on X"
                     >
-                      Twitter
+                      X
                     </a>
                     <a 
                       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://clickalinks.com/blog')}`}

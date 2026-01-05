@@ -245,6 +245,96 @@ ${transactionId ? `- Transaction ID: ${transactionId}\n` : ''}
 ${promoCode ? `- Promo Code Used: ${promoCode}\n` : ''}
 - Purchase Date: ${new Date().toLocaleString('en-GB')}
     `;
+  } else if (type === 'promoCodeUsed') {
+    // Special notification when promo code is used
+    const {
+      businessName,
+      contactEmail,
+      squareNumber,
+      pageNumber,
+      promoCode,
+      discountAmount,
+      originalAmount,
+      amount
+    } = data;
+
+    subject = `🎉 Promo Code Used - ${promoCode} - ${businessName}`;
+    
+    htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #10b981; }
+          .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .info-row:last-child { border-bottom: none; }
+          .label { font-weight: bold; color: #666; }
+          .value { color: #333; }
+          .promo-highlight { background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Promo Code Used!</h1>
+            <p>A customer has used a promo code for their purchase</p>
+          </div>
+          <div class="content">
+            <div class="promo-highlight">
+              <h2 style="margin-top: 0; color: #10b981;">Promo Code: ${promoCode}</h2>
+            </div>
+            <div class="info-box">
+              <h3 style="margin-top: 0;">📋 Purchase Details</h3>
+              <div class="info-row">
+                <span class="label">Business Name:</span>
+                <span class="value">${businessName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Contact Email:</span>
+                <span class="value">${contactEmail}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Square Number:</span>
+                <span class="value">${squareNumber} (Page ${pageNumber})</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Original Amount:</span>
+                <span class="value">£${originalAmount.toFixed(2)}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Discount Applied:</span>
+                <span class="value" style="color: #10b981; font-weight: bold;">-£${discountAmount.toFixed(2)}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Final Amount Paid:</span>
+                <span class="value" style="font-weight: bold; color: #667eea;">£${amount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    textContent = `
+Promo Code Used Notification
+
+Promo Code: ${promoCode}
+
+A customer has used a promo code for their purchase:
+
+Business: ${businessName}
+Email: ${contactEmail}
+Square: ${squareNumber} (Page ${pageNumber})
+Original Amount: £${originalAmount.toFixed(2)}
+Discount: -£${discountAmount.toFixed(2)}
+Final Amount: £${amount.toFixed(2)}
+    `;
   } else if (type === 'promo_code') {
     const {
       code,
