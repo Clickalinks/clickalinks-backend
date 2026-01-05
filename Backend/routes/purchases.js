@@ -112,17 +112,22 @@ router.post('/purchases',
       // ✅ CHECK 1: Verify promo code hasn't been used by this email/business BEFORE any other checks
       // This must happen first to prevent saving purchases with duplicate promo codes
       // REFRESHED: Stricter validation - check both email AND business name separately
+      // NOTE: Using separate queries to avoid requiring composite indexes
       if (promoCode || promoId) {
-        // Check by email address
-        const existingByEmail = await db.collection('purchasedSquares')
+        // Check by email address - Query paid purchases first, then filter for promo codes
+        const paidPurchasesByEmail = await db.collection('purchasedSquares')
           .where('contactEmail', '==', normalizedEmail)
-          .where('promoCode', '!=', null)
           .where('paymentStatus', '==', 'paid')
-          .limit(1)
           .get();
         
-        if (!existingByEmail.empty) {
-          const existing = existingByEmail.docs[0].data();
+        // Filter for purchases with promo codes
+        const existingByEmail = paidPurchasesByEmail.docs.find(doc => {
+          const data = doc.data();
+          return data.promoCode != null && data.promoCode !== '';
+        });
+        
+        if (existingByEmail) {
+          const existing = existingByEmail.data();
           console.log(`❌ Promo code restriction: Email ${normalizedEmail} has already used promo code ${existing.promoCode}`);
           return res.status(400).json({
             success: false,
@@ -131,16 +136,20 @@ router.post('/purchases',
           });
         }
 
-        // Check by business name
-        const existingByBusiness = await db.collection('purchasedSquares')
+        // Check by business name - Query paid purchases first, then filter for promo codes
+        const paidPurchasesByBusiness = await db.collection('purchasedSquares')
           .where('businessName', '==', businessName.trim())
-          .where('promoCode', '!=', null)
           .where('paymentStatus', '==', 'paid')
-          .limit(1)
           .get();
         
-        if (!existingByBusiness.empty) {
-          const existing = existingByBusiness.docs[0].data();
+        // Filter for purchases with promo codes
+        const existingByBusiness = paidPurchasesByBusiness.docs.find(doc => {
+          const data = doc.data();
+          return data.promoCode != null && data.promoCode !== '';
+        });
+        
+        if (existingByBusiness) {
+          const existing = existingByBusiness.data();
           console.log(`❌ Promo code restriction: Business ${businessName.trim()} has already used promo code ${existing.promoCode}`);
           return res.status(400).json({
             success: false,
