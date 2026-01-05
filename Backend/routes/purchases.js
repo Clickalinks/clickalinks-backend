@@ -46,7 +46,7 @@ router.post('/purchases',
         });
       }
 
-      const {
+      let {
         squareNumber,
         businessName,
         contactEmail,
