@@ -73,3 +73,24 @@ firebase-service-account.json
 
 # dataconnect generated files
 .dataconnect
+
+# Temporary and debug files
+test-*.js
+debug-*.js
+check-*.js
+list-*.js
+verify-*.js
+encode-*.js
+*test*.js
+*debug*.js
+*fix*.js
+*Demo.html
+*TEST*.html
+
+# Generated files
+asset-manifest.json
+
+# Backup files
+*.backup
+*~
+.DS_Store
