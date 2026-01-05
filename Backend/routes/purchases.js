@@ -221,16 +221,39 @@ router.post('/purchases',
 
       // Prepare purchase data
       // Ensure logoData is properly formatted - use storagePath if logoData is missing
+      // Also extract storagePath from logoData URL if storagePath is missing
       let finalLogoData = logoData;
       let finalStoragePath = storagePath;
-      if (!finalLogoData && storagePath) {
-        // If we have storagePath but no logoData, construct the Firebase Storage URL
-        if (storagePath.startsWith('logos/')) {
-          // Construct full Firebase Storage URL from path
-          finalLogoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
-        } else {
-          finalLogoData = storagePath; // Use as-is if already a full URL
+      
+      // If we have logoData URL but no storagePath, extract storagePath from URL
+      if (finalLogoData && !finalStoragePath && finalLogoData.includes('firebasestorage.googleapis.com')) {
+        try {
+          // Extract path from Firebase Storage URL
+          // Format: https://firebasestorage.googleapis.com/v0/b/bucket-name/o/logos%2Ffilename?alt=media&token=...
+          const urlMatch = finalLogoData.match(/\/o\/([^?]+)/);
+          if (urlMatch) {
+            finalStoragePath = decodeURIComponent(urlMatch[1]);
+            console.log(`✅ Extracted storagePath from logoData URL: ${finalStoragePath}`);
+          }
+        } catch (extractError) {
+          console.warn(`⚠️ Could not extract storagePath from logoData URL: ${extractError.message}`);
         }
+      }
+      
+      if (!finalLogoData && finalStoragePath) {
+        // If we have storagePath but no logoData, construct the Firebase Storage URL
+        if (finalStoragePath.startsWith('logos/')) {
+          // Construct full Firebase Storage URL from path (without token for cleaner URL)
+          finalLogoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(finalStoragePath)}?alt=media`;
+        } else {
+          finalLogoData = finalStoragePath; // Use as-is if already a full URL
+        }
+      }
+      
+      // Clean logoData URL - remove token parameter for cleaner URL
+      if (finalLogoData && finalLogoData.includes('&token=')) {
+        finalLogoData = finalLogoData.split('&token=')[0];
+        console.log(`✅ Cleaned logoData URL (removed token parameter)`);
       }
 
       // ✅ CRITICAL: Verify logo file exists in Storage if storagePath is provided
@@ -381,25 +404,10 @@ router.post('/purchases',
         }
 
         // 3. If promo code was used, send special admin notification
-        if (promoCode && adminEmailSuccess) {
-          try {
-            await sendAdminNotificationEmail('promoCodeUsed', {
-              businessName: businessName.trim(),
-              contactEmail: contactEmail.trim(),
-              squareNumber,
-              pageNumber,
-              duration,
-              amount: finalFinalAmount,
-              originalAmount: finalOriginalAmount,
-              discountAmount: finalDiscountAmount,
-              promoCode: promoCode,
-              purchaseId: finalPurchaseId
-            });
-            console.log('✅ Promo code usage notification sent to admin');
-          } catch (err) {
-            console.error('❌ Promo code notification email error:', err.message);
-            // Don't fail the purchase if this email fails
-          }
+        // NOTE: Promo code info is already included in the main purchase notification above
+        // No need to send a separate email - this was causing duplicate emails
+        if (promoCode) {
+          console.log(`📋 Promo code ${promoCode} used - info included in purchase notification email`);
         }
 
         // Only set emailsSent to true if at least admin email was sent successfully
