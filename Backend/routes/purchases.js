@@ -233,6 +233,38 @@ router.post('/purchases',
         }
       }
 
+      // ✅ CRITICAL: Verify logo file exists in Storage if storagePath is provided
+      // This prevents creating purchases with broken logo references
+      if (finalStoragePath && finalStoragePath.startsWith('logos/')) {
+        try {
+          const file = admin.storage().bucket().file(finalStoragePath);
+          const [exists] = await file.exists();
+          
+          if (!exists) {
+            console.error(`❌ Logo file not found in Storage: ${finalStoragePath}`);
+            console.error(`   Purchase: ${businessName} (${contactEmail})`);
+            console.error(`   Square: ${squareNumber}`);
+            
+            return res.status(400).json({
+              success: false,
+              error: 'Logo file not found in Storage. The logo upload may have failed. Please try uploading the logo again.',
+              code: 'LOGO_FILE_MISSING',
+              details: {
+                storagePath: finalStoragePath,
+                suggestion: 'Try re-uploading the logo from the business details form'
+              }
+            });
+          }
+          
+          console.log(`✅ Verified logo file exists in Storage: ${finalStoragePath}`);
+        } catch (storageError) {
+          console.error(`❌ Error checking Storage file: ${storageError.message}`);
+          // Don't block purchase if Storage check fails (network issue, etc.)
+          // But log it for investigation
+          console.warn(`⚠️ Continuing with purchase despite Storage check error`);
+        }
+      }
+
 
       const purchaseData = {
         purchaseId: finalPurchaseId,
