@@ -24,7 +24,7 @@
     "express-rate-limit": "^8.2.1",
     "express-timeout-handler": "^2.2.2",
     "express-validator": "^7.3.1",
-    "firebase-admin": "^13.0.1",
+    "firebase-admin": "12.7.0",
     "form-data": "^4.0.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -35,6 +35,11 @@
     "speakeasy": "^2.0.0",
     "stripe": "^17.3.1",
     "zxcvbn": "^4.4.2"
+  },
+  "overrides": {
+    "lodash": "4.17.23",
+    "@google-cloud/storage": "7.18.0",
+    "fast-xml-parser": "5.3.4"
   },
   "engines": {
     "node": ">=18.0.0",
