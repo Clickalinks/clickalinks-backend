@@ -11,7 +11,7 @@
 .header-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0.5rem 2rem 0.625rem 2rem;
+  padding: 0.25rem 1.5rem 0.4rem 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,11 +27,11 @@
   max-width: 100%;
   /* Slightly faded gradient for better text contrast */
   background: linear-gradient(135deg, 
-    rgba(255, 107, 53, 0.85) 0%, 
-    rgba(251, 191, 36, 0.85) 25%, 
-    rgba(16, 185, 129, 0.85) 50%, 
-    rgba(6, 182, 212, 0.85) 75%, 
-    rgba(236, 72, 153, 0.85) 100%);
+    rgba(255, 107, 53, 0.429) 0%, 
+    rgba(251, 190, 36, 0.432) 25%, 
+    rgba(16, 185, 129, 0.452) 50%, 
+    rgba(6, 181, 212, 0.445) 75%, 
+    rgba(236, 72, 154, 0.534) 100%);
   padding: 0.4rem 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -83,7 +83,7 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 0.1rem 0; /* Reduced padding */
+  padding: 0; /* Tighten spacing */
   margin: 0 auto;
 }
 
@@ -99,11 +99,74 @@
   overflow: visible; /* Allow navigation to extend */
 }
 
+/* ===== QUICK LINKS DROPDOWN ===== */
+.quick-links-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 140px;
+  position: relative;
+}
+
+.quick-links-button {
+  border: 2px solid rgba(30, 64, 175, 0.4);
+  border-radius: 10px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  background: linear-gradient(135deg, #43b4bc48 0%, #cff16946 100%);
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-links-button:hover {
+  border-color: rgba(30, 64, 175, 0.7);
+  transform: translateY(-1px);
+}
+
+.quick-links-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.quick-links-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  min-width: 200px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+  padding: 0.4rem;
+}
+
+.quick-links-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.quick-links-item:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .logo-link {
   display: block;
   text-decoration: none;
   transition: transform 0.2s ease;
-  padding: 0.25rem;
+  padding: 0.1rem;
 }
 
 .logo-link:hover {
@@ -111,12 +174,32 @@
 }
 
 .logo-image {
-  height: 160px !important;
+  height: 185px !important;
   width: auto !important;
-  max-width: 340px !important;
+  max-width: 380px !important;
   object-fit: contain;
   display: block;
   transition: height 0.3s ease, max-width 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0.2rem 1rem 0.35rem 1rem;
+  }
+  .logo-link {
+    padding: 0;
+  }
+  .logo-image {
+    height: 130px !important;
+    max-width: 260px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-image {
+    height: 115px !important;
+    max-width: 230px !important;
+  }
 }
 
 .logo-section img {
@@ -168,6 +251,37 @@
   overflow: visible; /* Allow all items to be visible */
   width: calc(10 * 120px + 9 * 0.75rem); /* Match grid width exactly (without outer padding) */
   max-width: calc(10 * 120px + 9 * 0.75rem); /* Match grid width exactly */
+}
+
+/* Mobile search row with quick links */
+.mobile-search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 520px) and (max-width: 767px) {
+  .mobile-search-row {
+    flex-direction: row;
+    align-items: center;
+  }
+  .quick-links-dropdown {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .quick-links-dropdown {
+    width: 100%;
+  }
+  .quick-links-button {
+    width: 100%;
+  }
+  .quick-links-menu {
+    width: 100%;
+    right: 0;
+  }
 }
 
 /* Mobile: Allow horizontal scrolling and ensure pages 1 and 10 are visible */
@@ -800,6 +914,46 @@
 /* Tablet/iPad Landscape (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape),
        (min-width: 768px) and (max-width: 1024px) {
+  .header {
+    background: #ffffff;
+  }
+  
+  .promo-strip {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 53, 0.429) 0%,
+      rgba(251, 190, 36, 0.432) 25%,
+      rgba(16, 185, 129, 0.452) 50%,
+      rgba(6, 181, 212, 0.445) 75%,
+      rgba(236, 72, 154, 0.534) 100%
+    );
+  }
+  
+  .nav-container {
+    background:
+      repeating-linear-gradient(
+        45deg,
+        #ff6b35 0px,
+        #ff6b35 12px,
+        #06b6d4 12px,
+        #06b6d4 24px,
+        #3b82f6 24px,
+        #3b82f6 36px,
+        #10b981 36px,
+        #10b981 48px,
+        #ec4899 48px,
+        #ec4899 60px,
+        #fbbf24 60px,
+        #fbbf24 72px
+      ),
+      linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background-blend-mode: overlay;
+  }
+  
+  .nav-container::before {
+    opacity: 0.9;
+  }
+
   .header-container {
     padding: 0.4rem 1rem 0.5rem 1rem;
     gap: 0.4rem;
